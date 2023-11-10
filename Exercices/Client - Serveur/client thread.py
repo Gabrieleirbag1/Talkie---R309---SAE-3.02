@@ -10,7 +10,7 @@ def task(i):
 def main():
     flag = False
     while flag == False:
-        message = str(input("User : "))
+        message = str(input("> "))
         host = '127.0.0.1'
 
         client_socket = socket.socket()
