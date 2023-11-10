@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 
+
 def task(i):
     print(f"Task {i} starts")
     time.sleep(1)
