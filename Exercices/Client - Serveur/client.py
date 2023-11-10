@@ -11,7 +11,8 @@ def main():
         try :
             client_socket.connect((host, 11111))
         except ConnectionRefusedError as error:
-            return error
+            print(error)
+            main()
 
 
         client_socket.send(message.encode())

@@ -24,12 +24,12 @@ def main():
         t1 = threading.Thread (target=task, args=[1])
         t1.start()
         conn, address = server_socket.accept()
+        message = conn.recv(1024).decode()
+        print(f'\nUser : {message}\n')
+
         t1.join()
         end = time.perf_counter()
         print(f"Tasks ended in {round(end - start, 2)} second(s)")
-
-        message = conn.recv(1024).decode()
-        print(f'User : {message}\n')
 
         if message == "arret":
             server_socket.close()
