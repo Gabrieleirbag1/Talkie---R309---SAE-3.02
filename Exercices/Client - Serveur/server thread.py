@@ -28,6 +28,7 @@ def main():
         print(f'\nUser : {message}\n')
 
         t1.join()
+        
         end = time.perf_counter()
         print(f"Tasks ended in {round(end - start, 2)} second(s)")
 
