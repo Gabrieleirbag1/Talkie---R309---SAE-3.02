@@ -29,6 +29,7 @@ class MainWindow(QMainWindow):
         self.btn_quit = QPushButton("Quitter")
 
         self.btn.clicked.connect(self.onClick)
+        self.combobox.activated.connect(self.cork)
         self.dialog.clicked.connect(self.button_clicked)
         self.btn_quit.clicked.connect(self.quit)
 
@@ -56,20 +57,30 @@ class MainWindow(QMainWindow):
     
     def onClick(self):
         text = self.line_edit1.text()
-        temp = self.label2.text()
         try:
             text = float(text)
             if self.combobox.currentText() == "°C --> °K":
                 text = text + 273.15
-                temp = "°C"
+                if text < 0:
+                    raise ValueError
             else :
                 text = text - 273.15
-                temp = "°K"
+                if text < -273.15:
+                    raise ValueError
                 
             self.line_edit2.setText(str(text))
         except ValueError:
             self.line_edit2.setText("Invalid Input")
-
+    
+    def cork(self):
+        if self.combobox.currentText() == "°C --> °K":
+            self.label2.setText(str("°C"))
+            self.label4.setText(str("°K"))
+        else:
+            self.label2.setText(str("°K"))
+            self.label4.setText(str("°C"))
+            
+        
     def button_clicked(self, s):
         dlg = QMessageBox(self)
         dlg.setWindowTitle("Aide")
