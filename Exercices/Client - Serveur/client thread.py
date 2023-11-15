@@ -1,46 +1,69 @@
 import socket 
 import threading
-import time
+import time, sys
 
+class DeconnexionError(Exception):
+    pass
 
-def task(i):
-    print(f"Task {i} starts")
-    time.sleep(1)
-
-def main():
+def envoi(client_socket):
     flag = False
     while flag == False:
-        message = str(input("> "))
-        host = '127.0.0.1'
+        try:
+            message = str(input(">"))
+       
+            client_socket.send(message.encode())
 
-        client_socket = socket.socket()
+            if message == "bye":
+                print("DÉCONNEXION")
+                flag = True
+                sys.exit()
 
-        try :
-            client_socket.connect((host, 11111))
+            elif message =="arret":
+                flag = True
+                sys.exit()
+
         except ConnectionRefusedError as error:
             print(error)
             main()
 
-        client_socket.send(message.encode())
+        except ConnectionResetError as error:
+            print(error)
+            main()
+                
 
-        if message == "bye":
-            print("DÉCONNEXION")
-            flag = True
+def reception(client_socket):
+    flag = True
+    while flag:
+        reply = client_socket.recv(1024).decode("utf-8")
+        if not reply:
+            print("Le serveur n'est plus accessible...")
+            flag = False
+            break
+ 
+        else:
+            print(f'Serveur : {reply}')
 
-        elif message =="arret":
-            flag = True
+def main():
+    while True:
+        try :
+            host, port = ('127.0.0.1', 11111)
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((host,port))
 
-        else :
-            t1 = threading.Thread (target=task, args=[1])
+            t1 = threading.Thread (target=reception, args=[client_socket])
+            t2 = threading.Thread (target=envoi, args=[client_socket])
             t1.start()
-            reply = client_socket.recv(1024).decode()
-            t1.join
-            print(reply)
+            t2.start()
+
+            t1.join()
+            t2.join()
+
             client_socket.close()
 
+        except ConnectionRefusedError:
+            print("Impossible de se connecter")
+            time.sleep(5)
 
-if __name__ == "__main__":
-    try:
-        main()
-    except ConnectionResetError as error:
-        print(error)
+
+if __name__ == '__main__':
+    main()
