@@ -8,6 +8,7 @@ def reception(conn, server_socket):
         message = conn.recv(1024).decode()
 
         if message == "arret":
+            print("Arret du serveur")
             server_socket.close()
             flag = False
 
@@ -24,9 +25,9 @@ def envoi(conn):
         reply = input(">")
         conn.send(reply.encode())
 
+flag = True
 def main():
-    while True:
-        reply = "Message reçu\n"
+    while flag:
 
         host = '0.0.0.0'
 
@@ -46,7 +47,6 @@ def main():
 
         t1.join()
         t2.join()
-
 
         conn.close()
 

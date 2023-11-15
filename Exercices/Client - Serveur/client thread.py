@@ -2,8 +2,6 @@ import socket
 import threading
 import time, sys
 
-class DeconnexionError(Exception):
-    pass
 
 def envoi(client_socket):
     flag = False
@@ -16,11 +14,9 @@ def envoi(client_socket):
             if message == "bye":
                 print("DÉCONNEXION")
                 flag = True
-                sys.exit()
 
             elif message =="arret":
                 flag = True
-                sys.exit()
 
         except ConnectionRefusedError as error:
             print(error)
@@ -34,17 +30,27 @@ def envoi(client_socket):
 def reception(client_socket):
     flag = True
     while flag:
-        reply = client_socket.recv(1024).decode("utf-8")
-        if not reply:
-            print("Le serveur n'est plus accessible...")
-            flag = False
-            break
- 
-        else:
-            print(f'Serveur : {reply}')
+        try:
+            reply = client_socket.recv(1024).decode("utf-8")
+            if not reply:
+                print("Le serveur n'est plus accessible...")
+                flag = False
+                break
+    
+            else:
+                print(f'Serveur : {reply}')
+                
+        except ConnectionRefusedError as error:
+            print(error)
+            main()
 
+        except ConnectionResetError as error:
+            print(error)
+            main()
+
+flag = True
 def main():
-    while True:
+    while flag:
         try :
             host, port = ('127.0.0.1', 11111)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
