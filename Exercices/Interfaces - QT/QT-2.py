@@ -3,6 +3,9 @@ from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QLineEdi
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+class TempException(Exception):
+    pass
+
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -62,15 +65,19 @@ class MainWindow(QMainWindow):
             if self.combobox.currentText() == "°C --> °K":
                 text = text + 273.15
                 if text < 0:
-                    raise ValueError
+                    self.line_edit2.setText("Invalid Input : Impossible values.")
+                    raise TempException
             else :
                 text = text - 273.15
                 if text < -273.15:
-                    raise ValueError
+                    self.line_edit2.setText("Invalid Input : Impossible Values.")
+                    raise TempException
+                    
                 
             self.line_edit2.setText(str(text))
         except ValueError:
-            self.line_edit2.setText("Invalid Input")
+            self.line_edit2.setText("Invalid Input : Caracters not allowed.")
+            self.errorBox()
     
     def cork(self):
         if self.combobox.currentText() == "°C --> °K":
@@ -89,11 +96,18 @@ class MainWindow(QMainWindow):
         dlg.setIcon(QMessageBox.Question)
         dlg.exec()
     
+    def errorBox(self):
+        error = QMessageBox(self)
+        error.setWindowTitle("Erreur")
+        error.setText("La valeur entrée n'est pas valide, la température doit être un réel.")
+        error.exec()
+
     def quit(self):
         #sender pas forrcément nécessaire ici mais je pense plus propre avec 
         sender = self.sender()
         if sender is self.btn_quit: 
             sys.exit(app.exec_())
+    
         
         
 app = QApplication(sys.argv)
