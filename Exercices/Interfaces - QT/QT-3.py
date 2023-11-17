@@ -1,4 +1,4 @@
-import sys
+import sys, threading, socket, time
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QLineEdit, QGridLayout, QPushButton, QComboBox, QMessageBox
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -8,7 +8,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.setWindowTitle("Conversion de température")
+        self.setWindowTitle("Client")
 
 
         self.label1 = QLabel("Messagerie")
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
     def button_clicked(self, s):
         dlg = QMessageBox(self)
         dlg.setWindowTitle("Aide")
-        dlg.setText("Permet de convertir des Celsius en Kelvin et inversement.")
+        dlg.setText("Envoyer un message pour utiliser la messagerie.")
         dlg.setStandardButtons(QMessageBox.Ok)
         dlg.setIcon(QMessageBox.Question)
         dlg.exec()
@@ -66,13 +66,12 @@ class MainWindow(QMainWindow):
         sender = self.sender()
         if sender is self.btn_quit: 
             sys.exit(app.exec_())
-    
-        
-        
+
 app = QApplication(sys.argv)
 window = MainWindow()
 window.resize(450, 450)
 window.show()
+
 
 if __name__ == '__main__':
     sys.exit(app.exec_())

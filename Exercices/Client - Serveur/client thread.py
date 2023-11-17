@@ -48,6 +48,10 @@ def reception(client_socket):
             print(error)
             main()
 
+        except BrokenPipeError as error:
+            print(f'{error} : Wait a few seconds')
+            main()
+
 flag = True
 def main():
     while flag:
