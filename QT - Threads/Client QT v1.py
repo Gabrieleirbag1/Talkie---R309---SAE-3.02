@@ -65,7 +65,7 @@ class Window(QMainWindow):
         self.label.setText(f"Running Threads")
         pool = QThreadPool.globalInstance()
         runnable = Runnable(message)
-        # 3. Call start()
+        # Call start()
         pool.start(runnable)
 
     def quit(self):
@@ -74,7 +74,7 @@ class Window(QMainWindow):
             sys.exit(app.exec_())
 
 try :
-    host, port = ('127.0.0.1', 1111)
+    host, port = ('127.0.0.1', 11111)
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
 except ConnectionRefusedError as error:
