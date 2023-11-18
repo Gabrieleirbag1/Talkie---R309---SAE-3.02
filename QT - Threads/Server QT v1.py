@@ -74,7 +74,7 @@ class Window(QMainWindow):
 
     def quit(self):
         sender = self.sender()
-        if sender is self.btn_quit: 
+        if sender is self.btn_quit:
             sys.exit(app.exec_())
 
 

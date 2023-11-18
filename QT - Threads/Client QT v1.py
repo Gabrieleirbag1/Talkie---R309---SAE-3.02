@@ -19,10 +19,9 @@ class Runnable(QRunnable):
 
             if self.message == "bye":
                 print("DÉCONNEXION")
-                Window.quit(self)
                 
             elif self.message == "arret":
-                Window.quit(self)
+                print("ARRET")
                 
 
         except ConnectionRefusedError as error:
