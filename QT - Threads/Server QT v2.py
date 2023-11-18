@@ -1,7 +1,7 @@
 import sys
 import time
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton
+from PyQt5.QtWidgets import *
 
 import socket
 
@@ -21,7 +21,7 @@ class ReceiverThread(QThread):
                 server_socket.close()
                 flag = False
             elif not recep:
-                continue
+                flag = False
             else:
                 print(f'User : {recep}\n')
                 # Émission du signal avec le message reçu
@@ -44,16 +44,19 @@ class Window(QMainWindow):
         self.line_edit = QLineEdit()
         self.countBtn = QPushButton("Envoyer")
         self.btn_quit = QPushButton("Quitter")
+        self.dialog = QPushButton("?")
 
         self.line_edit.setEnabled(False)
         self.btn_quit.clicked.connect(self.quit)
+        self.dialog.clicked.connect(self.button_clicked)
 
         # Configuration du layout
-        layout = QVBoxLayout()
+        layout = QGridLayout()
         layout.addWidget(self.label)
         layout.addWidget(self.line_edit)
         layout.addWidget(self.countBtn)
-        layout.addWidget(self.btn_quit)
+        layout.addWidget(self.btn_quit, 2, 0)
+        layout.addWidget(self.dialog, 2, 1)
 
         self.centralWidget.setLayout(layout)
 
@@ -66,6 +69,15 @@ class Window(QMainWindow):
         self.receiver_thread = ReceiverThread()
         self.receiver_thread.message_received.connect(self.update_reply)
         self.receiver_thread.start()
+
+
+    def button_clicked(self, s):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Aide")
+        dlg.setText("Centrale du Serveur.")
+        dlg.setStandardButtons(QMessageBox.Ok)
+        dlg.setIcon(QMessageBox.Question)
+        dlg.exec()
 
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
@@ -81,7 +93,7 @@ class Window(QMainWindow):
 
 
 # Configuration du socket serveur
-host, port = ('0.0.0.0', 1111)
+host, port = ('0.0.0.0', 11111)
 server_socket = socket.socket()
 server_socket.bind((host, port))
 server_socket.listen(1)

@@ -47,17 +47,19 @@ class Window(QMainWindow):
         self.line_edit = QLineEdit()
         self.btn_quit = QPushButton("Quitter")
         self.countBtn = QPushButton("Envoyer")
+        self.dialog = QPushButton("?")
 
         self.countBtn.clicked.connect(self.runTasks)
         self.btn_quit.clicked.connect(self.quit)
+        self.dialog.clicked.connect(self.button_clicked)
         
-
         # Set the layout
-        layout = QVBoxLayout()
+        layout = QGridLayout()
         layout.addWidget(self.label)
         layout.addWidget(self.line_edit)
         layout.addWidget(self.countBtn)
-        layout.addWidget(self.btn_quit)
+        layout.addWidget(self.btn_quit, 3, 0)
+        layout.addWidget(self.dialog, 3, 1)
         self.centralWidget.setLayout(layout)
 
     def runTasks(self):
@@ -68,19 +70,31 @@ class Window(QMainWindow):
         # Call start()
         pool.start(runnable)
 
+    def button_clicked(self, s):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Aide")
+        dlg.setText("Envoyer un message pour utiliser la messagerie.")
+        dlg.setStandardButtons(QMessageBox.Ok)
+        dlg.setIcon(QMessageBox.Question)
+        dlg.exec()
+
     def quit(self):
         sender = self.sender()
         if sender is self.btn_quit: 
             sys.exit(app.exec_())
 
-try :
-    host, port = ('127.0.0.1', 11111)
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-except ConnectionRefusedError as error:
-    print(error)
+flag = True
+while flag:
+    try :
+        host, port = ('127.0.0.1', 11111)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host, port))
+        app = QApplication(sys.argv)
+        window = Window()
+        window.show()
+        sys.exit(app.exec())
 
-app = QApplication(sys.argv)
-window = Window()
-window.show()
-sys.exit(app.exec())
+    except ConnectionRefusedError as error:
+        print(error)
+        time.sleep(5)
+
