@@ -31,7 +31,7 @@ def main():
     flag = True
     while flag:
         try :
-            host, port = ('127.0.0.1', 11111)
+            host, port = ('127.0.0.1', 1111)
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((host,port))
 

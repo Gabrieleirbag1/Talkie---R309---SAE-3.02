@@ -19,27 +19,26 @@ def reception(conn, server_socket):
         else:
             print(f'User : {message}\n')
 
-flag = True
+
+host = '0.0.0.0'
+server_socket = socket.socket()
+server_socket.bind((host, 11111))
+server_socket.listen(1)
+
+
 def main():
+    flag = True
     while flag:
-
-        host = '0.0.0.0'
-
-        server_socket = socket.socket()
-
-        server_socket.bind((host, 1111))
-
-        server_socket.listen(1)
-
         conn, address = server_socket.accept()
 
         t1 = threading.Thread (target=reception, args=[conn, server_socket])
-
         t1.start()
 
-        t1.join()
+        reply = input(">")
+        conn.send(reply.encode())
 
         conn.close()
+
 
 if __name__ == '__main__':
     main()

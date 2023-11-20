@@ -2,21 +2,22 @@ import socket
 import threading
 import time, sys
 
+flag = False
+arret = False
 
 def envoi(client_socket):
-    flag = False
+    global flag, arret
     while flag == False:
         try:
             message = str(input(">"))
        
             client_socket.send(message.encode())
 
-            if message == "bye":
-                print("DÉCONNEXION")
+            if message == "arret" or message == "bye":
+                print("Arret du serveur")
                 flag = True
-
-            elif message =="arret":
-                flag = True
+                if message == "arret":
+                    arret = True
 
         except ConnectionRefusedError as error:
             print(error)
@@ -25,17 +26,17 @@ def envoi(client_socket):
         except ConnectionResetError as error:
             print(error)
             main()
+    print("Arret de la Thread envoi")
                 
 
 def reception(client_socket):
-    flag = True
-    while flag:
+    global flag, arret
+    while not flag:
         try:
             reply = client_socket.recv(1024).decode("utf-8")
             if not reply:
                 print("Le serveur n'est plus accessible...")
-                flag = False
-                break
+                flag = True
     
             else:
                 print(f'Serveur : {reply}')
@@ -51,6 +52,7 @@ def reception(client_socket):
         except BrokenPipeError as error:
             print(f'{error} : Wait a few seconds')
             main()
+    print("Arret de la Thread reception")
 
 
 def main():
