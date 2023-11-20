@@ -16,8 +16,7 @@ def envoi(client_socket):
             if message == "arret" or message == "bye":
                 print("Arret du serveur")
                 flag = True
-                if message == "arret":
-                    arret = True
+                arret = True
 
         except ConnectionRefusedError as error:
             print(error)
@@ -34,9 +33,11 @@ def reception(client_socket):
     while not flag:
         try:
             reply = client_socket.recv(1024).decode("utf-8")
+
             if not reply:
                 print("Le serveur n'est plus accessible...")
                 flag = True
+                arret = True
     
             else:
                 print(f'Serveur : {reply}')
@@ -56,13 +57,12 @@ def reception(client_socket):
 
 
 def main():
-    flag = True
-    while flag:
-        try :
-            host, port = ('127.0.0.1', 11111)
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((host,port))
+    try :
+        host, port = ('127.0.0.1', 11111)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host,port))
 
+        while not arret:
             t1 = threading.Thread (target=reception, args=[client_socket])
             t2 = threading.Thread (target=envoi, args=[client_socket])
             t1.start()
@@ -70,13 +70,12 @@ def main():
 
             t1.join()
             t2.join()
-            flag = False
 
             client_socket.close()
 
-        except ConnectionRefusedError:
-            print("Impossible de se connecter")
-            time.sleep(5)
+    except ConnectionRefusedError:
+        print("Impossible de se connecter")
+        time.sleep(5)
 
 
 if __name__ == '__main__':
