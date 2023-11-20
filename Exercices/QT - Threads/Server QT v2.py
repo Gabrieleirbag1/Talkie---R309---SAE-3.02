@@ -16,12 +16,17 @@ class ReceiverThread(QThread):
         conn, address = server_socket.accept()
         while flag:
             recep = conn.recv(1024).decode()
+
             if recep == "arret":
                 print("Arret du serveur")
                 server_socket.close()
                 flag = False
+                self.wait()
+                sys.exit(app.exec())
+
             elif not recep:
                 flag = False
+
             else:
                 print(f'User : {recep}\n')
                 # Émission du signal avec le message reçu

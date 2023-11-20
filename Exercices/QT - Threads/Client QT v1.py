@@ -15,14 +15,7 @@ class Runnable(QRunnable):
         try:
             print(f"Message envoyé : {self.message}")
     
-            client_socket.send(self.message.encode())
-
-            if self.message == "bye":
-                print("DÉCONNEXION")
-                
-            elif self.message == "arret":
-                print("ARRET")
-                
+            client_socket.send(self.message.encode())              
 
         except ConnectionRefusedError as error:
             print(error)

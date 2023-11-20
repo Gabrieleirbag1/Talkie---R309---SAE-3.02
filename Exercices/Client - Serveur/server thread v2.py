@@ -19,14 +19,8 @@ def reception(conn, server_socket):
         else:
             print(f'User : {message}\n')
 
-def envoi(conn):
-    flag = False
-    while flag == False:
-        reply = input(">")
-        conn.send(reply.encode())
-
+flag = True
 def main():
-    flag = True
     while flag:
 
         host = '0.0.0.0'
@@ -40,14 +34,10 @@ def main():
         conn, address = server_socket.accept()
 
         t1 = threading.Thread (target=reception, args=[conn, server_socket])
-        t2 = threading.Thread (target=envoi, args=[conn])
 
         t1.start()
-        t2.start()
 
         t1.join()
-        t2.join()
-        flag = False
 
         conn.close()
 

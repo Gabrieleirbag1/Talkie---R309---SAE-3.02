@@ -4,8 +4,8 @@ import time, sys
 
 
 def envoi(client_socket):
-    flag = False
-    while flag == False:
+    flag = True
+    while flag:
         try:
             message = str(input(">"))
        
@@ -13,44 +13,18 @@ def envoi(client_socket):
 
             if message == "bye":
                 print("DÉCONNEXION")
-                flag = True
+                client_socket.close()
+                flag = False
 
             elif message =="arret":
-                flag = True
-
-        except ConnectionRefusedError as error:
-            print(error)
-            main()
-
-        except ConnectionResetError as error:
-            print(error)
-            main()
-                
-
-def reception(client_socket):
-    flag = True
-    while flag:
-        try:
-            reply = client_socket.recv(1024).decode("utf-8")
-            if not reply:
-                print("Le serveur n'est plus accessible...")
                 flag = False
-                break
-    
-            else:
-                print(f'Serveur : {reply}')
-                
+
         except ConnectionRefusedError as error:
             print(error)
-            main()
 
         except ConnectionResetError as error:
             print(error)
-            main()
-
-        except BrokenPipeError as error:
-            print(f'{error} : Wait a few seconds')
-            main()
+                
 
 
 def main():
@@ -61,16 +35,11 @@ def main():
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((host,port))
 
-            t1 = threading.Thread (target=reception, args=[client_socket])
             t2 = threading.Thread (target=envoi, args=[client_socket])
-            t1.start()
             t2.start()
 
-            t1.join()
             t2.join()
             flag = False
-
-            client_socket.close()
 
         except ConnectionRefusedError:
             print("Impossible de se connecter")
