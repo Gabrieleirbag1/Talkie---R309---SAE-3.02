@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 import socket
 
 flag = False    
+arret = False
 
 # Création d'une classe qui hérite de QThread pour gérer la réception des messages
 class ReceiverThread(QThread):
@@ -18,17 +19,16 @@ class ReceiverThread(QThread):
     # La méthode run est appelée lorsque le thread démarre
     def run(self):
         print("ReceiverThread Up")
-        global flag
+        global flag, arret
         #conn, address = server_socket.accept()
         while not flag:
             recep = self.conn.recv(1024).decode()
 
+        if recep == "arret" or recep == "bye":
+            print("Arret du serveur")
+            flag = True
             if recep == "arret":
-                print("Arret du serveur")
-                self.server_socket.close()
-                flag = False
-                self.wait()
-                sys.exit(app.exec())
+                arret = True
 
             elif not recep:
                 flag = False
@@ -73,6 +73,7 @@ class Window(QMainWindow):
         self.setCentralWidget(self.centralWidget)
         # Création et connexion des widgets
         self.label = QLabel("Logs")
+        self.label2 = QLabel("Réponse du Serveur")
         self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.label2.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 

@@ -5,31 +5,32 @@ from PyQt5.QtWidgets import *
 import socket
 
 
-flag = False    
+flag = False
+arret = False  
 
 # Création d'une classe qui hérite de QThread pour gérer la réception des messages
 class ReceiverThread(QThread):
     # Signal émis lorsque des messages sont reçus
     message_received = pyqtSignal(str)
-    def __init__(self, connexion):
+    def __init__(self, connexion, server_socket):
         super().__init__()
         self.conn = connexion
+        self.server_socket = server_socket
 
     # La méthode run est appelée lorsque le thread démarre
     def run(self):
         print("ReceiverThread Up")
-        global flag
-        #conn, address = server_socket.accept()
+        global flag, arret
         try:
             while not flag:
                 recep = self.conn.recv(1024).decode()
                 
-                if recep == "arret":
-                    print("Arret du serveur")
-                    self.server_socket.close()
-                    flag = False
-                    self.wait()
-                    sys.exit(app.exec())
+                if recep == "arret" or recep == "bye":
+                    print("Un client se déconnecte")
+                    flag = True
+                    if recep == "arret":
+                        print("Arrêt du serveur")
+                        arret = True
 
                 elif not recep:
                     self.conn.close()
@@ -43,7 +44,7 @@ class ReceiverThread(QThread):
         except Exception as err:
             print(err)
 
-        print("ReceiverThread ends")
+        print("ReceiverThread ends\n")
             
     def quitter(self):
         QCoreApplication.instance().quit()
@@ -85,24 +86,39 @@ class AcceptThread(QThread):
     
     def run(self):
         print("AcceptThread Up")
+        global flag, arret
         try:
-            host, port = ('0.0.0.0', 1111)
-            self.server_socket = socket.socket()
+            host, port = ('0.0.0.0', 11111)
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.bind((host, port))
             self.listen()
-            self.conn, self.address = self.server_socket.accept()
+            while not arret:
+                print("En attente d'une nouvelle connexion")
+                self.conn, self.address = self.server_socket.accept()
+                self.connect.connect(self.sender)
+                print("Nouvelle connexion !")
 
-            self.connect.connect(self.sender)
+                self.receiver_thread = ReceiverThread(self.conn, self.server_socket)
+                self.receiver_thread.message_received.connect(self.update_reply)      
+                self.receiver_thread.start()
+                self.receiver_thread.wait() 
+                #on attend la fin du thread receive avant de close la connexion
+                self.conn.close()
 
-            self.receiver_thread = ReceiverThread(self.conn)
-            self.receiver_thread.message_received.connect(self.update_reply)      
-            self.receiver_thread.start()
+                flag = False 
+                #on remet la variable globale flag en False pour que la boucle du ReceiverThread fonctionne
+                
+                self.connect.disconnect() 
+                #nécessaire sinon à chaque itération de la boucle il y a une nouvelle connexion du bouton à la fonction sender
+            self.server_socket.close()
+            print("Socket closed")
+            self.quitter()
 
 
         except Exception as err:
             print(err)
         
-        self.server_socket.close()
         print("AcceptThread ends")
     
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
@@ -116,6 +132,7 @@ class AcceptThread(QThread):
         reply = self.send.text()
         self.sender_thread = SenderThread(reply, self.conn)
         self.sender_thread.start()
+        self.sender_thread.wait()
     
     def quitter(self):
         QCoreApplication.instance().quit()
@@ -163,6 +180,9 @@ class Window(QMainWindow):
         self.label.setText(f"Log du serveur")
         self.line_edit.setText(f"")
 
+        self.main_thread()
+
+    def main_thread(self):
         log = self.line_edit
         send = self.line_edit2
         connect = self.countBtn.clicked

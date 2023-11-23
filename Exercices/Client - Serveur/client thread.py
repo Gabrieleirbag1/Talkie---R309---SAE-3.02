@@ -76,6 +76,7 @@ def main():
     except ConnectionRefusedError:
         print("Impossible de se connecter")
         time.sleep(5)
+        main()
 
 
 if __name__ == '__main__':
