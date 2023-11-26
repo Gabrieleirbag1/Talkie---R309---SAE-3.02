@@ -12,10 +12,11 @@ arret = False
 class ReceiverThread(QThread):
     # Signal émis lorsque des messages sont reçus
     message_received = pyqtSignal(str)
-    def __init__(self, connexion, server_socket):
+    def __init__(self, connexion, server_socket, all_threads):
         super().__init__()
         self.conn = connexion
         self.server_socket = server_socket
+        self.all_threads = all_threads
 
     # La méthode run est appelée lorsque le thread démarre
     def run(self):
@@ -24,10 +25,17 @@ class ReceiverThread(QThread):
         try:
             while not flag:
                 recep = self.conn.recv(1024).decode()
-                
+
                 if recep == "arret" or recep == "bye":
                     print("Un client se déconnecte")
-                    flag = True
+                    for conn in self.all_threads:
+                        if conn != self.conn:
+                            continue
+                        else:
+                            # Fermer uniquement la connexion qui a dit "bye"
+                            conn.close()
+                            self.all_threads.remove(conn)
+
                     if recep == "arret":
                         print("Arrêt du serveur")
                         arret = True
@@ -42,7 +50,7 @@ class ReceiverThread(QThread):
                     self.message_received.emit(recep)
             
         except Exception as err:
-            print(err)
+            print(f"{err}")
 
         print("ReceiverThread ends\n")
             
@@ -51,18 +59,18 @@ class ReceiverThread(QThread):
 
 
 class SenderThread(QThread):
-    def __init__(self, reply, connexion):
+    def __init__(self, reply, all_threads):
         super().__init__()
         self.reply = reply
-        self.conn = connexion
+        self.all_threads = all_threads
 
     def run(self):
         print("SenderThread Up")
         print(self.reply)
         try:
             try:
-                self.conn.send(self.reply.encode())
-
+                for conn in self.all_threads:
+                    conn.send(self.reply.encode())
             except ConnectionRefusedError as error:
                 print(error)
 
@@ -87,6 +95,7 @@ class AcceptThread(QThread):
     def run(self):
         print("AcceptThread Up")
         global flag, arret
+        self.all_threads = []
         try:
             host, port = ('0.0.0.0', 11111)
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -94,27 +103,26 @@ class AcceptThread(QThread):
             self.server_socket.bind((host, port))
             self.host = socket.gethostname()
             self.listen()
+            self.connect.connect(self.sender)
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
-                self.connect.connect(self.sender)
                 print(f"Nouvelle connexion de {self.host} !")
 
-                self.receiver_thread = ReceiverThread(self.conn, self.server_socket)
+                self.receiver_thread = ReceiverThread(self.conn, self.server_socket, self.all_threads)
                 self.receiver_thread.message_received.connect(self.update_reply)      
                 self.receiver_thread.start()
-                self.receiver_thread.wait() 
-                #on attend la fin du thread receive avant de close la connexion
-                self.conn.close()
-
-                flag = False 
-                #on remet la variable globale flag en False pour que la boucle du ReceiverThread fonctionne
-                
-                self.connect.disconnect() 
+                self.all_threads.append(self.conn)
+   
                 #nécessaire sinon à chaque itération de la boucle il y a une nouvelle connexion du bouton à la fonction sender
-            self.server_socket.close()
-            print("Socket closed")
-            self.quitter()
+            
+            else:
+                for conn in self.all_threads:
+                    conn.close()
+
+                self.server_socket.close()
+                print("Socket closed")
+                self.quitter()
 
 
         except Exception as err:
@@ -124,14 +132,14 @@ class AcceptThread(QThread):
     
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
-        self.log.setText(message)
+        self.log.append(message) 
     
     def listen(self):
         self.server_socket.listen(100)
     
     def sender(self):
         reply = self.send.text()
-        self.sender_thread = SenderThread(reply, self.conn)
+        self.sender_thread = SenderThread(reply, self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
     
@@ -155,14 +163,14 @@ class Window(QMainWindow):
         self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.label2.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
-        self.line_edit = QLineEdit()
+        self.text_edit = QTextEdit()
+        self.text_edit.setReadOnly(True)
         self.line_edit2= QLineEdit()
 
         self.countBtn = QPushButton("Envoyer")
         self.btn_quit = QPushButton("Quitter")
         self.dialog = QPushButton("?")
 
-        self.line_edit.setEnabled(False)
         self.dialog.clicked.connect(self.button_clicked)
         self.btn_quit.clicked.connect(self.quitter)
 
@@ -170,7 +178,7 @@ class Window(QMainWindow):
         layout = QGridLayout()
         layout.addWidget(self.label, 0, 0)
         layout.addWidget(self.label2, 2, 0)
-        layout.addWidget(self.line_edit, 1, 0)
+        layout.addWidget(self.text_edit, 1, 0, 1, 2) 
         layout.addWidget(self.line_edit2, 3, 0)
         layout.addWidget(self.countBtn, 4, 0)
         layout.addWidget(self.btn_quit, 5, 0)
@@ -179,12 +187,12 @@ class Window(QMainWindow):
         self.centralWidget.setLayout(layout)
 
         self.label.setText(f"Log du serveur")
-        self.line_edit.setText(f"")
+        self.text_edit.setText(f"")
 
         self.main_thread()
 
     def main_thread(self):
-        log = self.line_edit
+        log = self.text_edit
         send = self.line_edit2
         connect = self.countBtn.clicked
 

@@ -74,26 +74,24 @@ class SenderThread(QThread):
         print("SenderThread ends")
 
     def quitter(self):
-        QCoreApplication.instance().quit()
+        QCoreApplication.quit()
 
-class AcceptThread(QThread):
-    def __init__(self, server_socket, log, send, connect):
+
+class AcceptThread(QRunnable):
+    def __init__(self, log, send, connect, server_socket, host, i):
         super().__init__()
-        self.server_socket = server_socket
         self.log = log
         self.send = send
         self.connect = connect
+        self.server_socket = server_socket
+        self.host = host
+        self.i = i
+    
     
     def run(self):
-        print("AcceptThread Up")
+        print(f"AcceptThread Up {self.i}")
         global flag, arret
         try:
-            host, port = ('0.0.0.0', 11111)
-            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_socket.bind((host, port))
-            self.host = socket.gethostname()
-            self.listen()
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
@@ -103,14 +101,13 @@ class AcceptThread(QThread):
                 self.receiver_thread = ReceiverThread(self.conn, self.server_socket)
                 self.receiver_thread.message_received.connect(self.update_reply)      
                 self.receiver_thread.start()
-                self.receiver_thread.wait() 
+                self.receiver_thread.wait()
                 #on attend la fin du thread receive avant de close la connexion
                 self.conn.close()
 
                 flag = False 
                 #on remet la variable globale flag en False pour que la boucle du ReceiverThread fonctionne
                 
-                self.connect.disconnect() 
                 #nécessaire sinon à chaque itération de la boucle il y a une nouvelle connexion du bouton à la fonction sender
             self.server_socket.close()
             print("Socket closed")
@@ -120,7 +117,7 @@ class AcceptThread(QThread):
         except Exception as err:
             print(err)
         
-        print("AcceptThread ends")
+        print(f"AcceptThread ends {self.i}")
     
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
@@ -188,8 +185,20 @@ class Window(QMainWindow):
         send = self.line_edit2
         connect = self.countBtn.clicked
 
-        self.accept_thread = AcceptThread(self, log, send, connect)
-        self.accept_thread.start()
+        host, port = ('0.0.0.0', 11111)
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.bind((host, port))
+        self.host = socket.gethostname()
+        self.listen()
+
+        #threadCount = QThreadPool.globalInstance().maxThreadCount()
+        threadCount = 2
+        pool = QThreadPool.globalInstance()
+        
+        for i in range(threadCount):
+            runnable = AcceptThread(log, send, connect, self.server_socket, self.host, i)
+            pool.start(runnable)
 
 
     def button_clicked(self, s):
@@ -206,6 +215,9 @@ class Window(QMainWindow):
         flag = True
         arret = True
         QCoreApplication.instance().quit()
+
+    def listen(self):
+        self.server_socket.listen(100)
 
 
 # Configuration de l'application PyQt

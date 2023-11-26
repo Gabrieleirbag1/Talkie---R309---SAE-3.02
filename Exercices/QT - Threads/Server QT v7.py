@@ -51,18 +51,18 @@ class ReceiverThread(QThread):
 
 
 class SenderThread(QThread):
-    def __init__(self, reply, connexion):
+    def __init__(self, reply, all_threads):
         super().__init__()
         self.reply = reply
-        self.conn = connexion
+        self.all_threads = all_threads
 
     def run(self):
         print("SenderThread Up")
         print(self.reply)
         try:
             try:
-                self.conn.send(self.reply.encode())
-
+                for conn in self.all_threads:
+                    conn.send(self.reply.encode())
             except ConnectionRefusedError as error:
                 print(error)
 
@@ -87,6 +87,7 @@ class AcceptThread(QThread):
     def run(self):
         print("AcceptThread Up")
         global flag, arret
+        self.all_threads = []
         try:
             host, port = ('0.0.0.0', 11111)
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -94,24 +95,22 @@ class AcceptThread(QThread):
             self.server_socket.bind((host, port))
             self.host = socket.gethostname()
             self.listen()
+            self.connect.connect(self.sender)
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
-                self.connect.connect(self.sender)
                 print(f"Nouvelle connexion de {self.host} !")
 
                 self.receiver_thread = ReceiverThread(self.conn, self.server_socket)
                 self.receiver_thread.message_received.connect(self.update_reply)      
                 self.receiver_thread.start()
-                self.receiver_thread.wait() 
-                #on attend la fin du thread receive avant de close la connexion
-                self.conn.close()
-
-                flag = False 
-                #on remet la variable globale flag en False pour que la boucle du ReceiverThread fonctionne
-                
-                self.connect.disconnect() 
+                self.all_threads.append(self.conn)
+   
                 #nécessaire sinon à chaque itération de la boucle il y a une nouvelle connexion du bouton à la fonction sender
+            
+            for conn in self.all_threads:
+                conn.close()
+
             self.server_socket.close()
             print("Socket closed")
             self.quitter()
@@ -131,7 +130,7 @@ class AcceptThread(QThread):
     
     def sender(self):
         reply = self.send.text()
-        self.sender_thread = SenderThread(reply, self.conn)
+        self.sender_thread = SenderThread(reply, self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
     
