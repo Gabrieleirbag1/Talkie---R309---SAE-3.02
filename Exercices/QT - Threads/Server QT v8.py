@@ -39,6 +39,7 @@ class ReceiverThread(QThread):
                     if recep == "arret":
                         print("Arrêt du serveur")
                         arret = True
+                        self.quitter()
 
                 elif not recep:
                     self.conn.close()
@@ -55,6 +56,9 @@ class ReceiverThread(QThread):
         print("ReceiverThread ends\n")
             
     def quitter(self):
+        for conn in self.all_threads:
+            conn.close()
+        self.server_socket.close()
         QCoreApplication.instance().quit()
 
 
@@ -132,7 +136,7 @@ class AcceptThread(QThread):
     
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
-        self.log.append(message) 
+        self.log.append(f'{self.host}: {message}') 
     
     def listen(self):
         self.server_socket.listen(100)
