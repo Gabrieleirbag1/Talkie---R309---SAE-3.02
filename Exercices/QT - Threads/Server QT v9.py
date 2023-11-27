@@ -42,8 +42,13 @@ class ReceiverThread(QThread):
                         self.quitter()
 
                 elif not recep:
-                    self.conn.close()
-                    flag = False
+                    for conn in self.all_threads:
+                        if conn != self.conn:
+                            continue
+                        else:
+                            # Fermer uniquement la connexion qui a dit "bye"
+                            conn.close()
+                            self.all_threads.remove(conn)
 
                 else:
                     print(f'User : {recep}\n')
@@ -114,7 +119,8 @@ class AcceptThread(QThread):
                 print(f"Nouvelle connexion de {self.host} !")
 
                 self.receiver_thread = ReceiverThread(self.conn, self.server_socket, self.all_threads)
-                self.receiver_thread.message_received.connect(self.update_reply)      
+                self.receiver_thread.message_received.connect(self.update_reply)
+                self.receiver_thread.message_received.connect(self.send_everyone)      
                 self.receiver_thread.start()
                 self.all_threads.append(self.conn)
    
@@ -143,7 +149,13 @@ class AcceptThread(QThread):
     
     def sender(self):
         reply = self.send.text()
-        self.sender_thread = SenderThread(reply, self.all_threads)
+        self.sender_thread = SenderThread(f'Serveur : {reply}', self.all_threads)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    def send_everyone(self, message):
+        print("message")
+        self.sender_thread = SenderThread(message, self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
     
@@ -220,9 +232,8 @@ class Window(QMainWindow):
         QCoreApplication.instance().quit()
 
 
-# Configuration de l'application PyQt
-app = QApplication(sys.argv)
-window = Window()
-window.show()
-
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = Window()
+    window.show()
+    sys.exit(app.exec())

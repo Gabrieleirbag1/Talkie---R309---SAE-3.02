@@ -5,7 +5,6 @@ import sys, socket, time
 
 
 flag = False
-arret = False
 
 class SenderThread(QThread):
     def __init__(self, message, client_socket):
@@ -14,6 +13,7 @@ class SenderThread(QThread):
         self.client_socket = client_socket
 
     def run(self):
+        global flag
         print("SenderThread up")
         try:
             self.client_socket.send(self.message.encode())
@@ -21,7 +21,7 @@ class SenderThread(QThread):
             if self.message == "arret" or self.message == "bye":
                 print("Arret du serveur")
                 flag = True
-                arret = True
+                self.quitter()
 
         except ConnectionRefusedError as error:
             print(error)
@@ -29,6 +29,10 @@ class SenderThread(QThread):
         except ConnectionResetError as error:
             print(error)
         print("SenderThread ends")
+    
+    def quitter(self):
+        QCoreApplication.instance().quit()
+
                     
 
 class ReceptionThread(QThread):
@@ -39,7 +43,7 @@ class ReceptionThread(QThread):
 
     def run(self):
         print("ReceptionThread up")
-        global flag, arret
+        global flag
         while not flag:
             try:
                 reply = self.client_socket.recv(1024).decode("utf-8")
@@ -47,10 +51,9 @@ class ReceptionThread(QThread):
                 if not reply:
                     print("Le serveur n'est plus accessible...")
                     flag = True
-                    arret = True
         
                 else:
-                    print(f'Serveur : {reply}')
+                    print(f'{reply}')
                     self.message_received.emit(reply)
                     
             except ConnectionRefusedError as error:
@@ -89,14 +92,19 @@ class ConnectThread(QThread):
             self.run()
 
     def update_reply(self, message):
-        self.log.append(f'Serveur : {message}') 
+        self.log.append(f'{message}') 
 
     def sender(self):
         reply = self.send.text()
         self.sender_thread = SenderThread(reply, self.client_socket)
         self.sender_thread.start()
         self.sender_thread.wait()
-    
+
+    def quitter(self):
+        reply = "bye"
+        self.sender_thread = SenderThread(reply, self.client_socket)
+        self.sender_thread.start()
+        self.sender_thread.wait()
 
 class Window(object):
     def setupUi(self, MainWindow):
@@ -169,9 +177,15 @@ class Window(object):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    MainWindow = QMainWindow()
-    ui = Window()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
+    try:
+        app = QApplication(sys.argv)
+        MainWindow = QMainWindow()
+        ui = Window()
+        ui.setupUi(MainWindow)
+        MainWindow.show()
+
+        sys.exit(app.exec_())
+    finally:
+        print("Arrêt client")
+        flag = True
+        arret = True

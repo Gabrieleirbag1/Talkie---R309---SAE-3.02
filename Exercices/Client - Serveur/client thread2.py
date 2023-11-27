@@ -40,7 +40,7 @@ def reception(client_socket):
                 arret = True
     
             else:
-                print(f'Serveur : {reply}')
+                print(f'{reply}')
                 
         except ConnectionRefusedError as error:
             print(error)
