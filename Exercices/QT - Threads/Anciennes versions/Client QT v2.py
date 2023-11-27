@@ -2,8 +2,9 @@ import sys
 import time
 import socket
 
-from PyQt5.QtCore import QRunnable, Qt, QThreadPool
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 class Runnable(QRunnable):
     def __init__(self, message):
