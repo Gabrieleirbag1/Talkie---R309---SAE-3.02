@@ -3,7 +3,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import sys, socket, time
 
-
 flag = False
 
 class SenderThread(QThread):
