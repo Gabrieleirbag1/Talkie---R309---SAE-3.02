@@ -29,3 +29,10 @@ def historique():
 historique()
 print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M"))
 print("Normal text \x1B[3mitalic text\x1B[0m normal text")
+
+
+truc = "caca | zizi"
+
+truc = truc.split("|")
+
+print(truc[1])

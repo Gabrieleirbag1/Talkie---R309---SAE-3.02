@@ -32,9 +32,11 @@ class ReceiverThread(QThread):
         global flag, arret
         try:
             while not flag:
+                
                 recep = self.conn.recv(1024).decode()
+                message = recep.split("|")
 
-                if recep == "arret" or recep == "bye":
+                if message[1] == "arret" or message[1] == "bye":
                     print("Un client se déconnecte")
                     for conn in self.all_threads:
                         if conn != self.conn:
@@ -44,12 +46,12 @@ class ReceiverThread(QThread):
                             conn.close()
                             self.all_threads.remove(conn)
 
-                    if recep == "arret":
+                    if message[1] == "arret":
                         print("Arrêt du serveur")
                         arret = True
                         self.quitter()
                 
-                elif not recep:
+                elif not message[1]:
                     for conn in self.all_threads:
                         if conn != self.conn:
                             continue
@@ -59,7 +61,7 @@ class ReceiverThread(QThread):
                             self.all_threads.remove(conn)
 
                 else:
-                    print(f'User : {recep}\n')
+                    print(f'User : {message[1]}\n')
                     self.insert_data_to_db(recep)
                     # Émission du signal avec le message reçu
                     self.message_received.emit(recep)
@@ -76,10 +78,11 @@ class ReceiverThread(QThread):
         QCoreApplication.instance().quit()
 
     def insert_data_to_db(self, recep):
+        recep = recep.split("|")
         date_envoi = datetime.datetime.now()
-        salon = "Général"
+        salon = recep[0]
         user = 3
-        message = recep
+        message = recep[1]
         query = "INSERT INTO message (message, user, date_envoi, salon) VALUES (%s, %s, %s, %s)"
         data = (message, user, date_envoi, salon)
         
@@ -132,7 +135,6 @@ class HistoryThread(QThread):
 
     def run(self):
         print("HistoryThread Up")
-        print(self.history)
         try:
             try:
                 self.history_conn.send(self.history.encode())
@@ -205,7 +207,9 @@ class AcceptThread(QThread):
     
     # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
-        self.log.append(f'{self.host}: {message}') 
+        print(message)
+        message = message.split("|")
+        self.log.append(f'{self.host}: {message[1]}') 
     
     def listen(self):
         self.server_socket.listen(100)
@@ -217,13 +221,14 @@ class AcceptThread(QThread):
         self.sender_thread.wait()
 
     def send_everyone(self, message):
+        print(message)
         print(f"Send everyone : {message}")
         self.sender_thread = SenderThread(message, self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
 
-    def send_history(self, message, history_conn):
-        self.sender_thread = HistoryThread(message, history_conn)
+    def send_history(self, history, history_conn):
+        self.sender_thread = HistoryThread(history, history_conn)
         self.sender_thread.start()
         self.sender_thread.wait()
 
@@ -240,7 +245,7 @@ class AcceptThread(QThread):
 
         for id in range(nb_messages+1):
             try:
-                msg_query = f"SELECT message.message, user.username, message.date_envoi FROM message JOIN user ON message.user = user.id_user WHERE message.id_message = {id}"
+                msg_query = f"SELECT message.message, user.username, message.date_envoi, message.salon FROM message JOIN user ON message.user = user.id_user WHERE message.id_message = {id}"
                 cursor = conn.cursor()
                 cursor.execute(msg_query)
                 
@@ -248,8 +253,9 @@ class AcceptThread(QThread):
                 message = result[0]
                 username = result[1]
                 date = result[2]
+                salon = result[3]
 
-                history = f'{date.strftime("%H:%M")} - {username} ~~ {message}'
+                history = f'{salon}|{date.strftime("%H:%M")} - {username} ~~ {message}'
 
                 self.send_history(history, history_conn)
             except:
