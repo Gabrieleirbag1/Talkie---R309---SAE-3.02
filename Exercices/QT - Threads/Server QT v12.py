@@ -116,7 +116,7 @@ class ReceiverThread(QThread):
 
         except TypeError:
             reply = f"{reply}|2|L'UTILISATEUR N'A PAS ÉTÉ TROUVÉ"
-            self.sender_thread = SenderThread(f'{reply}', self.all_threads)
+            self.sender_thread = CodeThread(f'{reply}', code_conn)
             self.sender_thread.start()
             self.sender_thread.wait()
 
@@ -207,8 +207,11 @@ class SenderThread(QThread):
         print(self.reply)
         date = datetime.datetime.now().strftime("%H:%M")
         reply = self.reply.split("|")
-        username = reply[1].split("/")
-        reply = f"{reply[0]}|{date} - {username[0]} ~~ |{reply[2]}"
+        if reply[0] == "Serveur":
+            reply = f'Serveur|{date} - {reply[0]} ~~|{reply[1]}'
+        else:
+            username = reply[1].split("/")
+            reply = f"{reply[0]}|{date} - {username[0]} ~~ |{reply[2]}"
         print(f'LA REPLY{reply}')
         try:
             try:
@@ -330,7 +333,7 @@ class AcceptThread(QThread):
     
     def sender(self):
         reply = self.send.text()
-        self.sender_thread = SenderThread(f'Serveur : {reply}', self.all_threads)
+        self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
 

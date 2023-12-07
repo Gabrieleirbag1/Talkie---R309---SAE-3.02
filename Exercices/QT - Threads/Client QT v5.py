@@ -126,7 +126,6 @@ class ConnectThread(QThread):
         
     def update_reply(self, message):
         message = message.split("|")
-        print(f'GROS DODO {message},{message[2]}')
 
         if message[0] == 'Général':
             self.log.append(f'{message[1]}{message[2]}')
@@ -141,6 +140,13 @@ class ConnectThread(QThread):
             self.log4.append(f'{message[1]}{message[2]}')
         
         elif message[0] == 'Marketing':
+            self.log5.append(f'{message[1]}{message[2]}')
+
+        elif message[0] == 'Serveur':
+            self.log.append(f'{message[1]}{message[2]}')
+            self.log2.append(f'{message[1]}{message[2]}')
+            self.log3.append(f'{message[1]}{message[2]}')
+            self.log4.append(f'{message[1]}{message[2]}')
             self.log5.append(f'{message[1]}{message[2]}')
 
     def sender(self):
