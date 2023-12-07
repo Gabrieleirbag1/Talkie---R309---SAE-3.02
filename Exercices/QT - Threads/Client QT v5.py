@@ -476,10 +476,3 @@ if __name__ == "__main__":
         print("Arrêt client")
         flag = True
         arret = True
-
-        MainWindow.setEnabled(False)
-
-        error_dialog = QErrorMessage()
-        error_dialog.showMessage('Oh no! La connexion au serveur a été perdue...')
-
-        app.exec_()
