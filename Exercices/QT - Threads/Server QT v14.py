@@ -95,7 +95,6 @@ class ReceiverThread(QThread):
                 self.send_code(reply, code_conn)
 
             elif not re.match(email_pattern, signup[2]):
-                print()
                 reply = f"{reply}|6|MAIL BAD FORMAT"
                 self.send_code(reply, code_conn)
             
@@ -106,6 +105,8 @@ class ReceiverThread(QThread):
                     data = (signup[0], signup[3], signup[2], date_creation, signup[1])
                     cursor.execute(create_user_query, data)
                     conn.commit()
+                    
+                    self.salon(signup)
 
                     reply = f"{reply}|4|SIGN UP SUCCESS"
                     self.send_code(reply, code_conn)
@@ -121,6 +122,14 @@ class ReceiverThread(QThread):
                         print(f"Erreur MySQL : {err}")
         except Exception as e:
             print(e)
+
+    def salon(self, signup):
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Général', NOW(), (SELECT id_user FROM user WHERE username = '{signup[0]}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+
+        self.close(cursor)
 
     def send_code(self, reply, code_conn):
         print(reply)
@@ -141,10 +150,10 @@ class ReceiverThread(QThread):
             username = result[1]
             password = result[2]
 
+            self.close(cursor)
+
             if auth[0] == username or auth[1] == password:
-                print(1)
                 if auth[0] == username and auth[1] == password:
-                    print(2)
                     reply = f"{reply}|1|LOGIN SUCCESS"
                     self.send_code(reply, code_conn)
 
@@ -152,9 +161,10 @@ class ReceiverThread(QThread):
                         self.historique(code_conn)
                     except Exception as e:
                         print(e)
-                
+                    
+                    self.checkroom(auth[0], code_conn)
+
                 elif auth[0] == username and auth[1] != password:
-                    print(3)
                     reply = f"{reply}|3|ERREUR DE MDP"
                     self.send_code(reply, code_conn)
 
@@ -166,12 +176,25 @@ class ReceiverThread(QThread):
             reply = f"{reply}|2|L'UTILISATEUR N'A PAS ÉTÉ TROUVÉ"
             self.send_code(reply, code_conn)
 
+    def checkroom(self, username, code_conn):
+        msg_query = f"SELECT (SELECT user FROM acces_salon WHERE nom = 'Général' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_general, (SELECT user FROM acces_salon WHERE nom = 'Blabla' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_blabla, (SELECT user FROM acces_salon WHERE nom = 'Comptabilité' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_comptabilite, (SELECT user FROM acces_salon WHERE nom = 'Informatique' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_informatique, (SELECT user FROM acces_salon WHERE nom = 'Marketing' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_marketing"
+        cursor = conn.cursor()
+        cursor.execute(msg_query)
+            
+        result = cursor.fetchone()
+        self.close(cursor)
 
-    def quitter(self):
-        for conn in self.all_threads:
-            conn.close()
-        self.server_socket.close()
-        QCoreApplication.instance().quit()
+        i = 0
+        while i < len(result):
+            if result[i] is None:
+                reply = f"CODE|{10+i}|PAS ACCES SALON"
+                self.send_code(reply, code_conn)
+                i += 1
+            else:
+                reply = f"CODE|15|PAS ACCES SALON"
+                self.send_code(reply, code_conn)
+                i += 1
+
 
     def insert_data_to_db(self, recep):
         recep = recep.split("|")
@@ -184,6 +207,8 @@ class ReceiverThread(QThread):
         cursor.execute(user_query)
         result = cursor.fetchone()
         user = result[0]
+
+        self.close(cursor)
 
         date_envoi = datetime.datetime.now()
         salon = recep[0]
@@ -220,7 +245,7 @@ class ReceiverThread(QThread):
 
         for id in range(nb_messages+1):
             try:
-                msg_query = f"SELECT message.message, user.username, message.date_envoi, message.salon FROM message JOIN user ON message.user = user.id_user WHERE message.id_message = {id}"
+                msg_query = f"SELECT message.message, user.username, message.date_envoi, message.salon, user.alias FROM message JOIN user ON message.user = user.id_user WHERE message.id_message = {id}"
                 cursor = conn.cursor()
                 cursor.execute(msg_query)
                 
@@ -229,8 +254,9 @@ class ReceiverThread(QThread):
                 username = result[1]
                 date = result[2]
                 salon = result[3]
+                pseudo = result[4]
 
-                history = f'{salon}|{date.strftime("%H:%M")} - {username} ~~ |{message}'
+                history = f'{salon}|{date.strftime("%H:%M")} - {pseudo} ~~ |{message}'
 
                 self.send_history(history, history_conn)
             except:
@@ -240,6 +266,12 @@ class ReceiverThread(QThread):
 
     def close(self, cursor):
         cursor.close()
+    
+    def quitter(self):
+        for conn in self.all_threads:
+            conn.close()
+        self.server_socket.close()
+        QCoreApplication.instance().quit()
 
 
 class SenderThread(QThread):
@@ -257,13 +289,25 @@ class SenderThread(QThread):
             reply = f'Serveur|{date} - {reply[0]} ~~|{reply[1]}'
         else:
             username = reply[1].split("/")
-            reply = f"{reply[0]}|{date} - {username[0]} ~~ |{reply[2]}"
+
+            cursor = conn.cursor()
+            get_alias_query = f"SELECT alias FROM user WHERE username = '{username[0]}'"
+
+            cursor.execute(get_alias_query)
+            
+            result = cursor.fetchone()
+            alias = result[0]
+
+            reply = f"{reply[0]}|{date} - {alias} ~~ |{reply[2]}"
+
+            self.close(cursor)
+            
         print(f'LA REPLY{reply}')
         try:
             try:
                 print(self.all_threads)
-                for conn in self.all_threads:
-                    conn.send(reply.encode())
+                for conne in self.all_threads:
+                    conne.send(reply.encode())
             except ConnectionRefusedError as error:
                 print(error)
 
@@ -273,6 +317,9 @@ class SenderThread(QThread):
             print(err)
         
         print("SenderThread ends")
+
+    def close(self, cursor):
+        cursor.close()
 
     def quitter(self):
         QCoreApplication.instance().quit()
