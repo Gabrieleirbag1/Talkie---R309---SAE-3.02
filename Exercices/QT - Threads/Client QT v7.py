@@ -10,7 +10,8 @@ receiver_thread = None
 MainWindow = None
 username = None
 password = None
-self_window = None
+signup_window = None
+
 
 class SenderThread(QThread):
     error_connected = pyqtSignal(str)
@@ -45,6 +46,7 @@ class SenderThread(QThread):
 class ReceptionThread(QThread):
     message_received = pyqtSignal(str)
     success_connected = pyqtSignal(str)
+    users_sended = pyqtSignal(str)
     def __init__(self):
         super().__init__()
 
@@ -64,7 +66,12 @@ class ReceptionThread(QThread):
                 elif code[0] == "CODE":
                     self.success_connected.emit(code[1])
                     print(f'Reception de : {reply}')
-        
+
+                elif code[0] == "USERS":
+                    users = f"{code[1]}|{code[2]}"
+                    self.users_sended.emit(users)
+                    #print(f'Reception de : {users}')
+
                 else:
                     #print(f'Reception de : {reply}')
                     self.message_received.emit(reply)
@@ -155,6 +162,7 @@ class ConnectThread(QThread):
     def sender(self):
         global client_socket, username, password
         reply = f"Général|{username}/{password}|{self.send.text()}"
+        self.send.setText("")
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -162,6 +170,7 @@ class ConnectThread(QThread):
     def sender2(self):
         global client_socket, username, password
         reply = f"Blabla|{username}/{password}|{self.send2.text()}"
+        self.send2.setText("")
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -169,6 +178,7 @@ class ConnectThread(QThread):
     def sender3(self):
         global client_socket, username, password
         reply = f"Comptabilité|{username}/{password}|{self.send3.text()}"
+        self.send3.setText("")
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -176,6 +186,7 @@ class ConnectThread(QThread):
     def sender4(self):
         global client_socket, username, password
         reply = f"Informatique|{username}/{password}|{self.send4.text()}"
+        self.send4.setText("")
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -183,6 +194,7 @@ class ConnectThread(QThread):
     def sender5(self):
         global client_socket, username, password
         reply = f"Marketing|{username}/{password}|{self.send5.text()}"
+        self.send5.setText("")
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -193,7 +205,8 @@ class ConnectThread(QThread):
         self.sender_thread.start()
         self.sender_thread.wait()
 
-class Window(object):
+class Window(QObject):
+    courrier_window_signal = pyqtSignal()
     global MainWindow
     def setupUi(self, MainWindow):
         global receiver_thread
@@ -393,16 +406,24 @@ class Window(object):
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
         QMetaObject.connectSlotsByName(MainWindow)
-        MainWindow.setEnabled(False)
 
         self.mainthread()
         receiver_thread = ReceptionThread()
+        
+        self.courrier_button.clicked.connect(self.courrier_window)
+        self.courrier_button2.clicked.connect(self.courrier_window)
+        self.courrier_button3.clicked.connect(self.courrier_window)
+        self.courrier_button4.clicked.connect(self.courrier_window)
+        self.courrier_button5.clicked.connect(self.courrier_window)
 
         try:
             receiver_thread.success_connected.connect(self.history_code)
+            receiver_thread.users_sended.connect(self.users_show)
         except:
             pass
     
+    def courrier_window(self):
+        self.courrier_window_signal.emit()
 
     def mainthread(self):
         log = self.text_edit
@@ -430,6 +451,21 @@ class Window(object):
 
         self.label.setText(f"Messagerie (Connecté)")
 
+
+    def users_show(self, users):
+        users = users.split("|")
+        if users[0] == "Général":
+            self.users_text_edit.append(f"{users[1]}\n─────────────────")
+        elif users[0] == "Blabla":
+            self.users_text_edit2.append(f"{users[1]}\n─────────────────")
+        elif users[0] == "Comptabilité":
+            self.users_text_edit3.append(f"{users[1]}\n─────────────────")
+        elif users[0] == "Informatique":
+            self.users_text_edit4.append(f"{users[1]}\n─────────────────")
+        elif users[0] == "Marketing":
+            self.users_text_edit5.append(f"{users[1]}\n─────────────────")
+        
+
     def history_code(self, code):
         if int(code) > 9:
             if code == '10':
@@ -446,30 +482,27 @@ class Window(object):
 
             elif code == "14":
                 self.tabWidget.setTabEnabled(4, False)
-                # Si l'indice est valide, supprimez l'onglet
-
-
 
     def retranslateUi(self, MainWindow):
         _translate = QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Skype"))
-        self.label.setText(_translate("MainWindow", "Envoyer un message"))
+        self.label.setText(_translate("MainWindow", "Messagerie"))
         self.profil_button2.setText(_translate("MainWindow", "PROFIL"))
         self.courrier_button.setText(_translate("MainWindow", "✉"))
         self.send_button.setText(_translate("MainWindow", ">"))
-        self.label2.setText(_translate("MainWindow", "Envoyer un message"))
+        self.label2.setText(_translate("MainWindow", "Messagerie"))
         self.profil_button3.setText(_translate("MainWindow", "PROFIL"))
         self.courrier_button2.setText(_translate("MainWindow", "✉"))
         self.send_button2.setText(_translate("MainWindow", ">"))
-        self.label3.setText(_translate("MainWindow", "Envoyer un message"))
+        self.label3.setText(_translate("MainWindow", "Messagerie"))
         self.profil_button4.setText(_translate("MainWindow", "PROFIL"))
         self.courrier_button3.setText(_translate("MainWindow", "✉"))
         self.send_button3.setText(_translate("MainWindow", ">"))
-        self.label4.setText(_translate("MainWindow", "Envoyer un message"))
+        self.label4.setText(_translate("MainWindow", "Messagerie"))
         self.profil_button5.setText(_translate("MainWindow", "PROFIL"))
         self.courrier_button4.setText(_translate("MainWindow", "✉"))
         self.send_button4.setText(_translate("MainWindow", ">"))
-        self.label5.setText(_translate("MainWindow", "Envoyer un message"))
+        self.label5.setText(_translate("MainWindow", "Messagerie"))
         self.profil_button6.setText(_translate("MainWindow", "PROFIL"))
         self.courrier_button5.setText(_translate("MainWindow", "✉"))
         self.send_button5.setText(_translate("MainWindow", ">"))
@@ -482,7 +515,7 @@ class Window(object):
 
 
 class Login(QMainWindow):
-    show_self_signal = pyqtSignal()
+    signup_window_signal = pyqtSignal()
     def __init__(self, parent=None):
         super(Login, self).__init__(parent)
 
@@ -518,14 +551,14 @@ class Login(QMainWindow):
         self.signup_button.setGeometry(QRect(220, 250, 121, 31))
         self.signup_button.setObjectName("pushButton")
         self.signup_button.setText("S'inscrire")
-        self.signup_button.clicked.connect(self.self)
+        self.signup_button.clicked.connect(self.signup_window)
 
         self.connect_button2 = QPushButton(self)
         self.connect_button2.setGeometry(QRect(60, 250, 121, 31))
         self.connect_button2.setObjectName("pushButton_2")
         self.connect_button2.setText("Connexion")
         self.connect_button2.clicked.connect(self.auth)
-
+        
         try:
             receiver_thread.success_connected.connect(self.login)
         except:
@@ -545,14 +578,14 @@ class Login(QMainWindow):
         global MainWindow
         if int(code) <= 3:
             if code == '1':
-                MainWindow.setEnabled(True)
+                time.sleep(1)
+                MainWindow.show()
                 self.quitter()
             else:
                 self.errorBox(code)
 
-    def self(self):
-        global self_window
-        self.show_self_signal.emit()
+    def signup_window(self):
+        self.signup_window_signal.emit()
 
         
     def quitter(self):
@@ -696,7 +729,7 @@ class Sign_up(QMainWindow):
         elif code == '8':
             content = "(8) L'utilisateur existe déjà, votre identifiant doit être unique."
         elif code == '9':
-            content = "(9) Les caractères ne sont pas autorisés : %, #, &"
+            content = "(9) Les caractères ne sont pas autorisés : %, #, &, '"
         else:
             return
 
@@ -719,10 +752,65 @@ class Sign_up(QMainWindow):
     def quitter(self):
         self.close()
 
-def show_self_window():
-    global self_window
-    self_window = Sign_up()
-    self_window.show()
+class CourrierWidget(QWidget):
+    def __init__(self, text):
+        super().__init__()
+
+        self.initUI(text)
+
+    def initUI(self, text):
+        layout = QVBoxLayout(self)
+
+        self.button = QPushButton(text, self)
+        self.comboBox = QComboBox(self)
+        self.comboBox.addItem("Option 1")
+        self.comboBox.addItem("Option 2")
+        self.comboBox.addItem("Option 3")
+
+        layout.addWidget(self.button)
+        layout.addWidget(self.comboBox)
+
+class CourrierWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Notifications')
+        self.setGeometry(100, 100, 400, 300)
+
+        self.list_widget = QListWidget(self)
+
+        self.add_button = QPushButton('Ajouter', self)
+        self.add_button.clicked.connect(self.add_line_widget)
+
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(self.list_widget)
+        main_layout.addWidget(self.add_button)
+
+        self.line_widgets = []
+
+    def add_line_widget(self):
+        text = f'Ligne {len(self.line_widgets) + 1}'
+        line_widget = CourrierWidget(text)
+
+        item = QListWidgetItem(self.list_widget)
+        item.setSizeHint(line_widget.sizeHint())  # Définir la hauteur de l'élément
+        self.list_widget.addItem(item)
+        self.list_widget.setItemWidget(item, line_widget)
+
+        self.line_widgets.append(line_widget)
+
+def show_courrier_window():
+    global courrier_window
+    courrier_window = CourrierWindow()
+    courrier_window.show()
+
+def show_signup_window():
+    global signup_window
+    signup_window = Sign_up()
+    signup_window.show()
 
 def end():
     global flag, arret
@@ -738,13 +826,12 @@ if __name__ == "__main__":
         MainWindow = QMainWindow()
         ui = Window()
         ui.setupUi(MainWindow)
-        MainWindow.show()
-
         w = Login()
         w.show()
 
         # Connecter le signal show_self_signal à la fonction d'affichage de l'inscription
-        w.show_self_signal.connect(show_self_window)
+        w.signup_window_signal.connect(show_signup_window)
+        ui.courrier_window_signal.connect(show_courrier_window)
 
         sys.exit(app.exec_())
     finally:

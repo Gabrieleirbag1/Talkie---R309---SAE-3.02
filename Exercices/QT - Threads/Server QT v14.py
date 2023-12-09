@@ -71,6 +71,7 @@ class ReceiverThread(QThread):
                         print(f'User : {message[2]}\n')
                         self.insert_data_to_db(recep)
                         # Émission du signal avec le message reçu
+                        recep = f'{recep}|{self.conn}'
                         self.message_received.emit(recep)
             
         except IndexError:
@@ -155,10 +156,12 @@ class ReceiverThread(QThread):
             if auth[0] == username or auth[1] == password:
                 if auth[0] == username and auth[1] == password:
                     reply = f"{reply}|1|LOGIN SUCCESS"
+                    print(f"LOGIN {self.conn}")
                     self.send_code(reply, code_conn)
 
                     try:
                         self.historique(code_conn)
+                        self.users(code_conn)
                     except Exception as e:
                         print(e)
                     
@@ -176,6 +179,59 @@ class ReceiverThread(QThread):
             reply = f"{reply}|2|L'UTILISATEUR N'A PAS ÉTÉ TROUVÉ"
             self.send_code(reply, code_conn)
 
+    def users(self, users_conn):
+        nb_users_query = "SELECT MAX(id_user) FROM user"
+
+        cursor = conn.cursor()
+        cursor.execute(nb_users_query)
+        
+        result = cursor.fetchone()
+        nb_users = result[0]
+
+        self.close(cursor)
+        for id in range(nb_users+1):
+            try:
+                i = 0
+                while i < 5:
+
+                    if i == 0:
+                        salon = "Général"
+                    elif i == 1:
+                        salon = "Blabla"
+                    elif i == 2:
+                        salon = "Comptabilité"
+                    elif i == 3:
+                        salon = "Informatique"
+                    elif i == 4:
+                        salon = "Marketing"
+                    
+                    i += 1
+
+                    msg_query = f"SELECT user.alias, user.username, acces_salon.user FROM acces_salon JOIN user ON acces_salon.user = user.id_user WHERE acces_salon.nom = '{salon}' AND user.id_user = {id}"
+                    cursor = conn.cursor()
+                    cursor.execute(msg_query)
+                    
+                    result = cursor.fetchone()
+                    pseudo = result[0]
+                    username = result[1]
+
+                    users = f'USERS|{salon}|{pseudo} @{username}'
+
+                    if username is not None:
+                        self.send_users(users, users_conn)
+                    else: 
+                        continue
+
+                    self.close(cursor)
+            except:
+                continue
+        
+    
+    def send_users(self, users, users_conn):
+        self.users_thread = HistoryThread(users, users_conn)
+        self.users_thread.start()
+        self.users_thread.wait()
+
     def checkroom(self, username, code_conn):
         msg_query = f"SELECT (SELECT user FROM acces_salon WHERE nom = 'Général' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_general, (SELECT user FROM acces_salon WHERE nom = 'Blabla' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_blabla, (SELECT user FROM acces_salon WHERE nom = 'Comptabilité' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_comptabilite, (SELECT user FROM acces_salon WHERE nom = 'Informatique' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_informatique, (SELECT user FROM acces_salon WHERE nom = 'Marketing' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_marketing"
         cursor = conn.cursor()
@@ -191,7 +247,7 @@ class ReceiverThread(QThread):
                 self.send_code(reply, code_conn)
                 i += 1
             else:
-                reply = f"CODE|15|PAS ACCES SALON"
+                reply = f"CODE|15|ACCES SALON"
                 self.send_code(reply, code_conn)
                 i += 1
 
@@ -199,8 +255,6 @@ class ReceiverThread(QThread):
     def insert_data_to_db(self, recep):
         recep = recep.split("|")
         loggers = recep[1].split("/")
-
-        print(f"loggers : {loggers[0]}")
 
         user_query = f"select id_user from user where username = '{loggers[0]}'"
         cursor = conn.cursor()
@@ -228,9 +282,9 @@ class ReceiverThread(QThread):
             print(f"Erreur d'insertion : {error}")
 
     def send_history(self, history, history_conn):
-        self.sender_thread = HistoryThread(history, history_conn)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        self.history_thread = HistoryThread(history, history_conn)
+        self.history_thread.start()
+        self.history_thread.wait()
 
     def historique(self, history_conn):
         nb_msg_query = "SELECT MAX(id_message) FROM message"
@@ -302,10 +356,9 @@ class SenderThread(QThread):
 
             self.close(cursor)
             
-        print(f'LA REPLY{reply}')
         try:
             try:
-                print(self.all_threads)
+                #print(self.all_threads)
                 for conne in self.all_threads:
                     conne.send(reply.encode())
             except ConnectionRefusedError as error:
@@ -366,9 +419,6 @@ class HistoryThread(QThread):
         
         #print("HistoryThread ends")
 
-    def quitter(self):
-        QCoreApplication.instance().quit()
-
 class AcceptThread(QThread):
     def __init__(self, server_socket, log, send, connect):
         super().__init__()
@@ -386,13 +436,12 @@ class AcceptThread(QThread):
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_socket.bind((host, port))
-            self.host = socket.gethostname()
             self.listen()
             self.connect.connect(self.sender)
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
-                print(f"Nouvelle connexion de {self.host} !")
+                print(f"Nouvelle connexion !")
 
                 self.receiver_thread = ReceiverThread(self.conn, self.server_socket, self.all_threads)
                 self.receiver_thread.message_received.connect(self.update_reply)
@@ -419,13 +468,22 @@ class AcceptThread(QThread):
     def update_reply(self, message):
         print(message)
         message = message.split("|")
-        self.log.append(f'{self.host}: {message[2]}') 
+        user = message[1].split("/")
+        match = re.search(r"raddr=\('([^']+)', (\d+)\)", message[3])
+        if match:
+            ip_address = match.group(1)
+            port = match.group(2)
+            conn_info = f"{ip_address} / {port}"
+        else:
+            conn_info = "Inconnu"
+        self.log.append(f'({message[0]} - {conn_info}) {user[0]}: {message[2]}') 
     
     def listen(self):
         self.server_socket.listen(100)
     
     def sender(self):
         reply = self.send.text()
+        self.send.setText("")
         self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -448,7 +506,7 @@ class Window(QMainWindow):
 
     def setupUi(self):
         self.setWindowTitle("Serveur")
-        self.resize(250, 150)
+        self.resize(500, 500)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
         # Création et connexion des widgets
@@ -473,8 +531,8 @@ class Window(QMainWindow):
         layout.addWidget(self.label, 0, 0)
         layout.addWidget(self.label2, 2, 0)
         layout.addWidget(self.text_edit, 1, 0, 1, 2) 
-        layout.addWidget(self.line_edit2, 3, 0)
-        layout.addWidget(self.countBtn, 4, 0)
+        layout.addWidget(self.line_edit2, 3, 0, 1, 2)
+        layout.addWidget(self.countBtn, 4, 0, 1, 2)
         layout.addWidget(self.btn_quit, 5, 0)
         layout.addWidget(self.dialog, 5, 1)
 
@@ -521,3 +579,5 @@ if __name__ == "__main__":
     finally :
         print("Arrêt du serveur")
         
+
+#mysql> ALTER TABLE user ADD CONSTRAINT CK_username_chars CHECK (username NOT REGEXP "[#&%']");
