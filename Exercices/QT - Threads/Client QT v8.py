@@ -26,7 +26,7 @@ class SenderThread(QThread):
         try:
             client_socket.send(self.message.encode())
 
-            if self.message == "arret" or self.message == "bye":
+            if self.message == "/arret" or self.message == "/bye":
                 print("Arret du serveur")
                 flag = True
                 self.quitter()
@@ -64,6 +64,7 @@ class ReceptionThread(QThread):
                     self.quitter()
 
                 elif code[0] == "CODE":
+                    print(code[1])
                     self.success_connected.emit(code[1])
                     print(f'Reception de : {reply}')
 
@@ -467,21 +468,71 @@ class Window(QObject):
         
 
     def history_code(self, code):
-        if int(code) > 9:
-            if code == '10':
-                self.tabWidget.setTabEnabled(0, False)
-            
-            elif code == "11":
-                self.tabWidget.setTabEnabled(1, False)
+        try:
+            if int(code) > 9:
+                if code == '10':
+                    self.tabWidget.setTabEnabled(0, False)
+                
+                elif code == "11":
+                    self.tabWidget.setTabEnabled(1, False)
 
-            elif code == "12":
-                self.tabWidget.setTabEnabled(2, False)
+                elif code == "12":
+                    self.tabWidget.setTabEnabled(2, False)
 
-            elif code == "13":
-                self.tabWidget.setTabEnabled(3, False)
+                elif code == "13":
+                    self.tabWidget.setTabEnabled(3, False)
 
-            elif code == "14":
-                self.tabWidget.setTabEnabled(4, False)
+                elif code == "14":
+                    self.tabWidget.setTabEnabled(4, False)
+
+                elif code == "17":
+                    self.errorbox(code)
+
+                elif code == "21":
+                    self.errorbox(code)
+                
+                elif code == "22":
+                    self.errorbox(code)
+
+                elif code == "23":
+                    self.errorbox(code)
+
+                elif code == "24":
+                    self.errorbox(code)
+                
+                elif code == "25":
+                    self.errorbox(code)
+
+        except:
+            pass
+
+    def errorbox(self, code):
+        error = QMessageBox()
+        error.setWindowTitle("Erreur")
+        if code == "17":
+            content = "(17) Vous n'avez pas la permission d'effectuer cette commande !"
+        elif code == "21":
+            content = "(21) L'utilisateur que vous voulez sanctionner n'existe pas."
+        elif code == "22":
+            content = "(22) Erreur de syntaxe de la commande."
+        elif code == "23":
+            content = "(23) L'utilisateur a déjà une sanction."
+        elif code == "24":
+            content = "(24) Vous avez été exclu du serveur."
+            quit = True
+        elif code == "25":
+            content = "(25) Vous avez été banni du serveur."
+            quit = True
+        error.setText(content)
+        error.setIcon(QMessageBox.Warning)
+        error.exec()
+
+        if quit:
+            print("TRUE")
+            self.quitter()
+
+    def quitter(self):
+        QCoreApplication.instance().quit()
 
     def retranslateUi(self, MainWindow):
         _translate = QCoreApplication.translate
@@ -536,6 +587,7 @@ class Login(QMainWindow):
         self.username = QLineEdit(self)
         self.username.setGeometry(QRect(60, 80, 281, 25))
         self.username.setObjectName("lineEdit")
+        self.username.returnPressed.connect(self.auth)
 
         self.label_2 = QLabel(self)
         self.label_2.setGeometry(QRect(160, 130, 141, 41))
@@ -546,6 +598,7 @@ class Login(QMainWindow):
         self.password.setGeometry(QRect(60, 180, 281, 25))
         self.password.setObjectName("lineEdit_2")
         self.password.setEchoMode(QLineEdit.Password)
+        self.password.returnPressed.connect(self.auth)
 
         self.signup_button = QPushButton(self)
         self.signup_button.setGeometry(QRect(220, 250, 121, 31))
@@ -576,13 +629,25 @@ class Login(QMainWindow):
     
     def login(self, code):
         global MainWindow
-        if int(code) <= 3:
-            if code == '1':
-                time.sleep(1)
-                MainWindow.show()
-                self.quitter()
+        try:
+            code20 = code.split("/")
+            code200 = code20[0]
+        except:
+            code200 = '20'
+
+        try:
+            if int(code) <= 3 or int(code) == 19:
+                if code == '1':
+                    time.sleep(1)
+                    MainWindow.show()
+                    self.quitter()
+                else:
+                    self.errorBox(code, code20)
+        except:
+            if int(code200) == 20:
+                self.errorBox(code, code20)
             else:
-                self.errorBox(code)
+                pass
 
     def signup_window(self):
         self.signup_window_signal.emit()
@@ -591,10 +656,9 @@ class Login(QMainWindow):
     def quitter(self):
         self.close()
 
-    def errorBox(self, code):
+    def errorBox(self, code, code20):
         error = QMessageBox(self)
         error.setWindowTitle("Erreur")
-        print(code)
         if code == '2':
             content = "(2) L'utilisateur n'a pas été trouvé"
         elif code == '3':
@@ -603,6 +667,10 @@ class Login(QMainWindow):
             return
         elif code == '16':
             content = "(16) Erreur de connexion au serveur."
+        elif code == '19':
+            content = "(19) Vous avez été banni(e) pour une durée indéfinie."
+        elif code20[0] == '20':
+            content = f"(20) Vous avez été exclu jusqu'au {code20[1]}"
         else:
             content = "Erreur inconnue"
 
