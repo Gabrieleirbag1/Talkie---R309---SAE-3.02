@@ -1,17 +1,26 @@
-user_conn = {'Conn': ["conn1", "conn2", "conn3"],
-             'Username': ["user1", "user2", "user1"],
-             'Address': ["addr1", "addr2", "addr3"],
-             'Port': ["port1", "port2", "port3"]}
+import mysql.connector
 
-user = "user1"  # Remplacez ceci par la valeur que vous recherchez
+conn = mysql.connector.connect(
+        host='localhost',
+        user='gab',
+        password='',
+        database='Skype'
+    )
 
-conn_list = []  # Liste pour stocker les CONN correspondants
+def check_demande():
 
-# Parcours de chaque index dans la liste 'Username'
-for i, username in enumerate(user_conn['Username']):
-    if username == user:
-        # Si le Username correspond, ajoutez la Conn correspondante à la liste
-        conn_list.append(user_conn['Conn'][i])
 
-# Affichage de la liste des CONN correspondants
-print(conn_list)
+    nb_msg_query = f"SELECT * FROM demande where receveur = 'Emi'"
+
+    cursor = conn.cursor()
+    cursor.execute(nb_msg_query)
+    
+    result = cursor.fetchall()
+    print(result)
+
+    conn.close()
+
+    if result[0][7] == 0:
+        print("caca")
+
+check_demande()
