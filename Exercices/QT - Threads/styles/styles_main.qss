@@ -1,0 +1,111 @@
+QLabel#label{
+    color: #f0f0f0;
+    background-color: transparent;
+}
+
+QStatusBar{
+    color: #f0f0f0;
+    background-color: rgb(23, 24, 23);
+}
+
+QTabWidget{
+    background-color: rgb(23, 24, 23);
+}
+
+QWidget#centralwidget {
+    background-color: rgb(23, 24, 23);
+}
+/* styles.qss */
+QWidget#tab {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 0, 80, 1), stop: 1 rgba(0, 0, 140, 1));
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+/* Style for QTextEdit (text_edit) */
+QTextEdit#text_edit {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 15, 30, 1), stop: 1 rgba(0, 55, 145, 1));
+    border-radius: 12px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QTextEdit#users_text_edit {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 15, 30, 1), stop: 1 rgba(0, 55, 145, 1));
+    border-radius: 12px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+/* Style for QLineEdit (line_edit) */
+QLineEdit#lineEdit {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 20, 135, 1), stop: 1 rgba(0, 40, 150, 1));
+    padding-left: 3%;
+    border-radius: 12px;
+    font-size: 20px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+/* Style for QPushButton (profil_button) */
+QPushButton#profil_button {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 45, 120, 1), stop: 1 rgba(0, 40, 140, 1));
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QPushButton#profil_button:hover {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 55, 190, 1), stop: 1 rgba(0, 70, 210, 1));
+}
+/* Style for QPushButton (courrier_button) */
+QPushButton#courrier_button {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 45, 120, 1), stop: 1 rgba(0, 40, 140, 1));
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+    border-radius: 12px;
+}
+
+QPushButton#courrier_button:hover {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 55, 190, 1), stop: 1 rgba(0, 70, 210, 1));
+}
+
+/* Style for QPushButton (send_button) */
+QPushButton#send_button {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 45, 135, 1), stop: 1 rgba(0, 40, 165, 1));
+    font-family: Arial;
+    font-size: 40px;
+    border-radius: 12px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QPushButton#send_button:hover {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 55, 190, 1), stop: 1 rgba(0, 70, 210, 1));
+}
+
+/* Style for QPushButton (friends_button) */
+QPushButton#friends_button {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 20, 45, 1), stop: 1 rgba(0, 35, 45, 1));
+    font-family: Arial;
+    font-size: 40px;
+    border-radius: 12px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+
+QTabBar::tab {
+    background-color: rgb(41, 41, 41);
+    color: #f0f0f0;
+}
+
+QTabBar::tab:disabled {
+    background-color: gray; /* Couleur de fond des onglets désactivés */
+}
+
+QTabBar::tab:selected {
+    background-color: rgb(77, 75, 75); /* Couleur de fond lorsque l'onglet est actif */
+}
+
+QTabBar::tab:hover {
+    background-color: rgb(77, 75, 75);; /* Couleur de fond lorsque l'onglet est actif */
+}
+

@@ -1,5 +1,6 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
 import socket, mysql.connector, datetime, sys, re, time, threading
 
 try:
@@ -12,12 +13,15 @@ try:
 except Exception as e:
     print(e)
 
+
+window = None
 flag = False
 arret = False  
-cmd = ["/stop", "/bye", "/kick", "/ban", "/unban", "/help"]
-user_conn = {'Conn' :[], 'Username' :[], 'Address' :[], 'Port' :[]}
+cmd = ("/stop", "/bye", "/kick", "/ban", "/unban", "/help", "/get-ip")
+user_conn = {'Conn' :[], 'Username' :[], 'Address' :[], 'Port' :[], 'SuperUser': []}
 
-help = "Liste des commandes\n─────────────────────────────────────────\n/help (Liste des commandes)\n/bye (Déconnecte l'utilisateur)\n\n───────────────── Admin ─────────────────\n/ban (Banni un utilisateur):\n* [username] -p\n* [ip/socket_id] -a\n\n/kick (Exclu un utilisateur):\n* [username] [int] [SECOND, MINUTE, HOUR, YEAR] -p\n* [ip/socket_id] [int] [SECOND, MINUTE, HOUR, YEAR] -a\n\n/unban (Retire une sanction):\n* [username]\n\n/stop (Arrête le serveur)\n─────────────────────────────────────────"
+help = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br>─────────────────────────────────────────"
+helpadmin = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br><br>───────────────── Admin ─────────────────<br>/ban (Banni un utilisateur):\<br>* [username] -p<br>* [ip/socket_id] -a<br><br>/kick (Exclu un utilisateur):<br>* [username] [int] [SECOND, MINUTE, HOUR, YEAR] -p<br>* [ip/socket_id] [int] [SECOND, MINUTE, HOUR, YEAR] -a<br><br>/get-ip (Permet d'obtenir l'adresse ip d'un utilisateur:<br>* [username]<br><br>/unban (Retire une sanction):<br>* [username]<br><br>/stop (Arrête le serveur)<br>─────────────────────────────────────────"
 
 # Création d'une classe qui hérite de QThread pour gérer la réception des messages
 class ReceiverThread(QThread):
@@ -60,8 +64,15 @@ class ReceiverThread(QThread):
                     concerne = f"{message[3]}/{message[5]}"
                     print(message)
                     print(concerne)
+                    nom_salon = concerne.split("/")
                     if type == "Salon":
-                        self.check_salon_accept(user, concerne)
+                        if not self.checkroom2(user, nom_salon[0]):
+                            self.check_salon_accept(user, concerne)
+                        else:
+                            reply = f"CODE|29|USER DEJA ACCES AU SALON"
+                            self.send_code(reply, self.conn)
+                    elif type == "Admin":
+                        self.check_admin_accept(user, concerne)
                     else:
                         print("validate error")
 
@@ -75,6 +86,12 @@ class ReceiverThread(QThread):
                     print(message)
                     print(concerne)
                     self.delete_reponse(demandeur, type, receveur, concerne, validate)
+
+                elif message[0] == "PROFIL":
+                    self.update_profil(message, self.conn)
+
+                elif message[2] == "" or message[2] == " ": #pas de message vide
+                    pass
 
                 else :
                     if message[2] in cmd or sanction[0] in cmd:
@@ -91,8 +108,10 @@ class ReceiverThread(QThread):
                             break
 
                         elif message[2] == "/help":
-                            reply = help
-                            print(help)
+                            if self.check_admin(auth[0]):
+                                reply = helpadmin
+                            else:
+                                reply = help
                             self.sender_thread = HistoryThread(f'Serveur| {reply}', self.conn)
                             self.sender_thread.start()
                             self.sender_thread.wait()
@@ -113,7 +132,7 @@ class ReceiverThread(QThread):
                                 self.sender_thread.start()
                                 self.sender_thread.wait()
 
-                        elif sanction[0] == '/ban' or sanction[0] == "/kick":
+                        elif sanction[0] == '/ban' or sanction[0] == "/kick" or sanction[0] == "/get-ip":
                             if self.check_admin(auth[0]):
                                 if sanction[0] == "/ban":
                                     try:
@@ -133,6 +152,18 @@ class ReceiverThread(QThread):
                                         user = sanction[1]
                                         date_fin = f'{sanction[2]} {sanction[3]}'
                                         self.new_sanction(user, date_fin, sanction_type, self.conn, sanction[4])
+                                    except:
+                                        recep = "CODE"
+                                        self.sender_thread = CodeThread(f'{recep}|22|ERREUR SYNTAXE', self.conn)
+                                        self.sender_thread.start()
+                                        self.sender_thread.wait()
+
+                                elif sanction[0] == "/get-ip":
+                                    print(sanction)
+                                    try:
+                                        print(sanction[1])
+                                        user = sanction[1]
+                                        self.get_ip(user, self.conn)
                                     except:
                                         recep = "CODE"
                                         self.sender_thread = CodeThread(f'{recep}|22|ERREUR SYNTAXE', self.conn)
@@ -192,6 +223,41 @@ class ReceiverThread(QThread):
 
         print("ReceiverThread ends\n")
     
+    def get_ip(self, user, code_conn):
+        print("get_ip")
+        index_conn = user_conn['Username'].index(user)
+        address = user_conn['Address'][index_conn]
+        port = user_conn['Port'][index_conn]
+        reply = f"{address}/{port}"
+        print(reply)
+        
+        self.sender_thread = HistoryThread(f'Serveur| {reply}', code_conn)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    def update_profil(self, info_profil, code_conn):
+        index_conn = user_conn['Conn'].index(code_conn)
+        user = user_conn['Username'][index_conn]
+
+        try:
+            if info_profil[1] == "Description":
+                sanction_query = f"UPDATE user SET description = '{info_profil[2]}' WHERE username = '{user}'"
+                cursor = conn.cursor()
+                cursor.execute(sanction_query)
+                conn.commit()
+                self.close(cursor)
+            
+            elif info_profil[1] == "Photo":
+                sanction_query = f"UPDATE user SET photo = '{info_profil[2]}' WHERE username = '{user}'"
+                cursor = conn.cursor()
+                cursor.execute(sanction_query)
+                conn.commit()
+                self.close(cursor)
+
+        except Exception as e:
+            print(e)
+
+
     def notifications(self, code_conn):
         print("notification")
         conn_list = []
@@ -199,7 +265,11 @@ class ReceiverThread(QThread):
         user = user_conn['Username'][index_conn]
         print(user)
 
-        nb_msg_query = f"SELECT * FROM demande where receveur = '{user}'"
+        if self.check_admin(user):
+            nb_msg_query = f"SELECT * FROM demande where receveur = 'Admin'"
+
+        else:
+            nb_msg_query = f"SELECT * FROM demande where receveur = '{user}'"
 
         cursor = conn.cursor()
         cursor.execute(nb_msg_query)
@@ -227,12 +297,7 @@ class ReceiverThread(QThread):
             print(reply)
             i+=1
             
-            try:
-                for admin_conn in conn_list:
-                    self.send_history(reply, admin_conn)
-                    print("done")
-            except:
-                pass
+            self.send_history(reply, code_conn)
 
             print("stop")
     
@@ -267,13 +332,10 @@ class ReceiverThread(QThread):
             print(reply)
             print(result[i][7])
             
-            try:
-                for admin_conn in conn_list:
-                    if result[i][7] == 0:
-                        self.send_history(reply, admin_conn)
-                        print("thisdone")
-            except:
-                pass
+            
+            if result[i][7] == 0:
+                self.send_history(reply, code_conn)
+                print("thisdone")
             i+=1
 
     def create_demande(self, demande, demande_conn):
@@ -289,6 +351,100 @@ class ReceiverThread(QThread):
         elif demande[2] == "Reponse":
             print("REPONSE")
             self.demande_reponse(demande, demande_conn)
+
+    def demande_admin(self, demande, code_conn):
+        if not self.check_admin(demande[1]):
+            self.send_demande_admin(demande[1], code_conn)
+        else:
+            reply = f"CODE|30|DÉJÀ SUPER USER"
+            self.send_code(reply, code_conn)
+
+    def send_demande_admin(self, username, code_conn):
+        print("send_demande_admin")
+        conn_list = []
+        if not self.check_demande(username, "Admin"):
+            print("demande checked")
+            create_demande_query = f"INSERT INTO demande (type, date_demande, demandeur, receveur, concerne) VALUES ('Admin', NOW(), '{username}', 'Admin', 'Admin')"
+            cursor = conn.cursor()
+            cursor.execute(create_demande_query)
+            conn.commit()
+            self.close(cursor)
+
+            date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+
+            reply = f"DEMANDE|{username}|Admin|Admin|{date}|NULL/Salon"#on précise le type de requête DEMANDE
+            try :
+                for i, is_admin in enumerate(user_conn['SuperUser']):
+                    if is_admin == "1":
+                        conn_list.append(user_conn['Conn'][i])
+                try:
+                    for admin_conn in conn_list:
+                        print("send admin")
+                        print(reply)
+                        try:
+                            self.send_history(reply, admin_conn)
+                            print("send admin fin")
+                        except:
+                            continue
+                except:
+                    pass
+            except :
+                pass
+
+        else:
+            reply = f"CODE|28|DEMANDE DÉJÀ FAITE"
+            self.send_code(reply, code_conn)
+
+    def check_admin_accept(self, user, admin):
+        admin = admin.split("/")
+        accept = admin[1]
+        conn_list = []
+        print(admin)
+        if accept == "ACCEPT":
+            try :
+                for i, username in enumerate(user_conn['Username']):
+                    if username == user:
+                        conn_list.append(user_conn['Conn'][i])
+                try:
+                    for admin_conn in conn_list:
+                        self.send_new_admin(admin_conn)
+                except Exception as e:
+                    print(e)
+            except Exception as e:
+                print(e)
+            self.add_admin(user)
+            index = user_conn['Username'].index(user)
+            user_conn['SuperUser'][index] = '1'
+
+            i = 0
+            while i < 5:
+                if i == 0:
+                    salon = "Général"
+                elif i == 1:
+                    salon = "Blabla"
+                elif i == 2:
+                    salon = "Comptabilité"
+                elif i == 3:
+                    salon = "Informatique"
+                elif i == 4:
+                    salon = "Marketing"
+                i += 1
+                if not self.checkroom2(user, salon):
+                    try:
+                        for admin_conn in conn_list:
+                            self.send_new_salon(salon, admin_conn)
+                            lesalon = [salon]
+                            self.new_salon2(user, lesalon)
+                    except:
+                        pass
+                else:
+                    continue
+            
+            self.delete_demande(user, admin)
+            self.accept(user, admin)
+                
+        else:
+            self.refuse(user, admin)
 
     def demande_salon(self, demande, code_conn):
         if not self.checkroom2(demande[1], demande[3]):
@@ -329,8 +485,8 @@ class ReceiverThread(QThread):
 
             reply = f"DEMANDE|{username}|Salon|{salon}|{date}|NULL/Salon"#on précise le type de requête DEMANDE
             try :
-                for i, username in enumerate(user_conn['Username']):
-                    if username == "Admin":
+                for i, is_admin in enumerate(user_conn['SuperUser']):
+                    if is_admin == "1":
                         conn_list.append(user_conn['Conn'][i])
                 try:
                     for admin_conn in conn_list:
@@ -457,9 +613,28 @@ class ReceiverThread(QThread):
             reply = f"CODE|27/{salon}|ACCES SALON SPÉCIFIQUE"
             self.send_code(reply, code_conn)
         except Exception as e:
-            print("nigga")
+            print("nog")
             print(e)
-    
+
+    def send_new_admin(self, code_conn):
+        print("send_new_admin")
+        try:
+            reply = f"CODE|31|NOUVEL ADMIN"
+            self.send_code(reply, code_conn)
+        except Exception as e:
+            print("souk")
+            print(e)
+
+    def add_admin(self, user):
+        print("add_admin")
+        admin_query = f"UPDATE user SET is_admin = 1 WHERE username = '{user}'"
+        cursor = conn.cursor()
+        cursor.execute(admin_query)
+        conn.commit()
+
+        self.close(cursor)
+
+
     def new_salon2(self, username, salon):
         print("new salon 2")
         create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('{salon[0]}', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
@@ -570,7 +745,6 @@ class ReceiverThread(QThread):
                 if username == user:
                     conn_list.append(user_conn['Conn'][i])
 
-            print(conn_list)
             pass
 
         else:
@@ -868,6 +1042,7 @@ class ReceiverThread(QThread):
                             self.users(code_conn)
                             self.notifications(code_conn)
                             self.demandes(code_conn)
+                            self.profil(auth[0], code_conn)
                         except:
                             pass
 
@@ -886,6 +1061,28 @@ class ReceiverThread(QThread):
         except TypeError:
             reply = f"{reply}|2|L'UTILISATEUR N'A PAS ÉTÉ TROUVÉ"
             self.send_code(reply, code_conn)
+
+
+    def profil(self, user, code_conn):
+        profil_query = f"SELECT * FROM user where username = '{user}'"
+
+        cursor = conn.cursor()
+        cursor.execute(profil_query)
+        
+        result = cursor.fetchone()
+        alias = result[5]
+        is_admin = result[6]
+        mail = result[3]
+        description = result[8]
+        date = result[4]
+        date = date.strftime("%d/%m/%Y %H:%M")
+        photo = result[9]
+
+        self.close(cursor)
+
+        reply = f"PROFIL|{user}|{alias}|{mail}|{is_admin}|{description}|{date}|{photo}"
+        self.send_code(reply, code_conn)
+
 
     def add_dictionnary(self, user, conn):
         print("add_dictionnary")
@@ -913,6 +1110,12 @@ class ReceiverThread(QThread):
                 user_conn["Username"].append(user)
                 user_conn["Address"].append(ip_address)
                 user_conn["Port"].append(port)
+
+                if self.check_admin(user):
+                    user_conn["SuperUser"].append("1")
+                else:
+                    user_conn["SuperUser"].append("0")
+
 
                 print(user_conn)
 
@@ -1064,7 +1267,7 @@ class ReceiverThread(QThread):
                 salon = result[3]
                 pseudo = result[4]
 
-                history = f'{salon}|{date.strftime("%H:%M")} - {pseudo} ~~ |{message}'
+                history = f'{salon}|{date.strftime("%d/%m/%Y %H:%M")} - {pseudo} ~~ |{message}'
 
                 self.send_history(history, history_conn)
             except:
@@ -1098,7 +1301,7 @@ class SenderThread(QThread):
     def run(self):
         print("SenderThread Up")
         print(self.reply)
-        date = datetime.datetime.now().strftime("%H:%M")
+        date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
         reply = self.reply.split("|")
         if reply[0] == "Serveur":
             reply = f'Serveur|{date} - {reply[0]} ~~|{reply[1]}'
@@ -1167,11 +1370,11 @@ class HistoryThread(QThread):
 
     def run(self):
         #print("HistoryThread Up")
-        date = datetime.datetime.now()
+        date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
         try :
             reply = self.history.split("|")
             if reply[0] == "Serveur":
-                reply = f'Serveur|{date.strftime("%H:%M")} - {reply[0]} ~~|{reply[1]}'
+                reply = f'Serveur|{date} - {reply[0]} ~~|{reply[1]}'
                 self.history_conn.send(reply.encode())
                 return
             else:
@@ -1210,6 +1413,7 @@ class AcceptThread(QThread):
             self.server_socket.bind((host, port))
             self.listen()
             self.connect.connect(self.sender)
+            self.send.returnPressed.connect(self.sender)
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
@@ -1286,6 +1490,7 @@ class AcceptThread(QThread):
 
 # Classe de la fenêtre principale
 class Window(QMainWindow):
+    global w
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi()
@@ -1327,9 +1532,10 @@ class Window(QMainWindow):
         self.label.setText(f"Log du serveur")
         self.text_edit.setText(f"")
 
-        self.main_thread()
+        w.start_server.connect(self.main_thread)
 
     def main_thread(self):
+        print("Démarrage du serveur")
         log = self.text_edit
         send = self.line_edit2
         connect = self.countBtn.clicked
@@ -1353,13 +1559,278 @@ class Window(QMainWindow):
         arret = True
         QCoreApplication.instance().quit()
 
+class Login(QMainWindow):
+    signup_window_signal = pyqtSignal()
+    start_server = pyqtSignal()
+    def __init__(self, parent=None):
+        super(Login, self).__init__(parent)
 
+        self.setupUi()
+
+    def setupUi(self):
+        global receiver_thread
+        self.setObjectName("Login")
+        self.resize(400, 300)
+
+        self.setWindowTitle("Log in - Serveur")
+
+        self.label = QLabel(self)
+        self.label.setGeometry(QRect(160, 30, 141, 41))
+        self.label.setObjectName("label")
+        self.label.setText("Identifiant")
+
+        self.username = QLineEdit(self)
+        self.username.setGeometry(QRect(60, 80, 281, 25))
+        self.username.setObjectName("lineEdit")
+        self.username.returnPressed.connect(self.auth)
+
+        self.label_2 = QLabel(self)
+        self.label_2.setGeometry(QRect(160, 130, 141, 41))
+        self.label_2.setObjectName("label_2")
+        self.label_2.setText("Mot de passe")
+
+        self.password = QLineEdit(self)
+        self.password.setGeometry(QRect(60, 180, 281, 25))
+        self.password.setObjectName("lineEdit_2")
+        self.password.setEchoMode(QLineEdit.Password)
+        self.password.returnPressed.connect(self.auth)
+
+        self.signup_button = QPushButton(self)
+        self.signup_button.setGeometry(QRect(220, 250, 121, 31))
+        self.signup_button.setObjectName("pushButton")
+        self.signup_button.setText("Inscrire")
+        self.signup_button.clicked.connect(self.first_time)
+        self.signup_button.setEnabled(False)
+
+        self.connect_button2 = QPushButton(self)
+        self.connect_button2.setGeometry(QRect(60, 250, 121, 31))
+        self.connect_button2.setObjectName("pushButton_2")
+        self.connect_button2.setText("Connexion")
+        self.connect_button2.clicked.connect(self.auth)
+
+    def auth(self):
+        global window
+        username = self.username.text()
+        password = self.password.text()
+
+        if username == 'root':
+            if password == "root":
+                self.username.setEnabled(False)
+                self.password.setEnabled(False)
+                self.connect_button2.setEnabled(False)
+                self.signup_button.setEnabled(True)
+                self.start_server.emit()
+                window.show()
+            else:
+                self.errorbox("B")
+
+    def errorbox(self, code):
+        error = QMessageBox()
+        error.setWindowTitle("Erreur")
+        if code == "B":
+            content = "(B) Mot de passe incorrect."
+        error.setText(content)
+        error.setIcon(QMessageBox.Warning)
+        error.exec()
+
+    def first_time(self):
+        self.signup_window_signal.emit()
+
+class Sign_up(QMainWindow):
+    def __init__(self, parent=None):
+        super(Sign_up, self).__init__(parent)
+
+        self.setupUi()
+
+    def setupUi(self):
+        global receiver_thread
+
+        self.setObjectName("Sign_up")
+        self.resize(432, 593)
+        self.setWindowTitle("Sign up")
+
+        font = QFont()
+        font.setPointSize(14)
+
+        self.label = QLabel(self)
+        self.label.setGeometry(20, 20, 221, 31)
+        self.label.setFont(font)
+        self.label.setObjectName("label_identifiant")
+        self.label.setText("Identifiant")
+
+        self.line_edit = QLineEdit(self)
+        self.line_edit.setGeometry(20, 60, 391, 31)
+        self.line_edit.setObjectName("lineEdit_identifiant")
+        self.line_edit.setMaxLength(45)
+
+        self.label_2 = QLabel(self)
+        self.label_2.setGeometry(20, 120, 221, 31)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2_pseudo")
+        self.label_2.setText("Pseudo")
+
+        self.line_edit_2 = QLineEdit(self)
+        self.line_edit_2.setGeometry(20, 160, 391, 31)
+        self.line_edit_2.setObjectName("lineEdit_2_pseudo")
+        self.line_edit_2.setMaxLength(20)
+
+        self.label_3 = QLabel(self)
+        self.label_3.setGeometry(20, 220, 221, 31)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3_mail")
+        self.label_3.setText("Mail")
+
+        self.line_edit_3 = QLineEdit(self)
+        self.line_edit_3.setGeometry(20, 260, 391, 31)
+        self.line_edit_3.setObjectName("lineEdit_3_mail")
+        self.line_edit_3.setMaxLength(320)
+
+        self.label_4 = QLabel(self)
+        self.label_4.setGeometry(20, 320, 281, 31)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4_mdp")
+        self.label_4.setText("Mot de passe")
+
+        self.line_edit_4 = QLineEdit(self)
+        self.line_edit_4.setGeometry(20, 360, 391, 31)
+        self.line_edit_4.setText("")
+        self.line_edit_4.setObjectName("lineEdit_4_mdp")
+        self.line_edit_4.setMaxLength(45)
+        self.line_edit_4.setEchoMode(QLineEdit.Password)
+
+        self.label_5 = QLabel(self)
+        self.label_5.setGeometry(20, 420, 261, 31)
+        self.label_5.setFont(font)
+        self.label_5.setObjectName("label_5_cmdp")
+        self.label_5.setText("Confirmer le mot de passe")
+
+        self.line_edit_5 = QLineEdit(self)
+        self.line_edit_5.setGeometry(20, 460, 391, 31)
+        self.line_edit_5.setObjectName("lineEdit_5_cmdp")
+        self.line_edit_5.setMaxLength(45)
+        self.line_edit_5.setEchoMode(QLineEdit.Password)
+
+        self.line_edit.returnPressed.connect(self.sign_up)
+        self.line_edit_2.returnPressed.connect(self.sign_up)
+        self.line_edit_3.returnPressed.connect(self.sign_up)
+        self.line_edit_4.returnPressed.connect(self.sign_up)
+        self.line_edit_5.returnPressed.connect(self.sign_up)
+
+
+        self.signup_button = QPushButton(self)
+        self.signup_button.setGeometry(QRect(150, 520, 140, 41))
+        self.signup_button.setFont(font)
+        self.signup_button.setObjectName("pushButton")
+        self.signup_button.setText("S'inscrire")
+        self.signup_button.clicked.connect(self.sign_up)
+
+
+    def sign_up(self):
+        try:
+            username = self.line_edit.text()
+            alias = self.line_edit_2.text()
+            mail = self.line_edit_3.text()
+            mdp = self.line_edit_4.text()
+            cmdp = self.line_edit_5.text()
+            email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+
+            if mdp != cmdp:
+                self.errorbox("C")
+                return
+            
+            elif not re.match(email_pattern, mail):
+                self.errorbox("F")
+                return
+            
+            self.create_super_user(username, alias, mail, mdp)
+            self.successBox("A")
+            self.close()
+
+        except mysql.connector.Error as err:
+            if err.errno == 1062:  # Numéro d'erreur MySQL pour la violation de contrainte d'unicité
+                self.errorbox("D")
+            elif err.errno == 3819:
+                self.errorbox("E")
+
+    def errorbox(self, code):
+        error = QMessageBox()
+        error.setWindowTitle("Erreur")
+        if code == "C":
+            content = "(C) Les mots de passe ne sont pas identiques."
+        elif code == "D":
+            content = "(D) Les caractères ne sont pas autorisés : %, #, &, '"
+        elif code == 'F':
+            content = "(F) Le mail ne respect pas le format."
+        error.setText(content)
+        error.setIcon(QMessageBox.Warning)
+        error.exec()
+
+    def successBox(self, code):
+        if code == 'A':
+            success = QMessageBox(self)
+            success.setWindowTitle("Succès")
+            content = "Creation du compte super utilisateur réussie !"
+            success.setIcon(QMessageBox.Information)
+            success.setText(content)
+            success.exec()
+            self.quitter()
+        else:
+            self.errorBox(code)
+
+    def quitter(self):
+        self.close()
+
+    def create_super_user(self, username, alias, mail, mdp):
+        create_user_query = f"INSERT INTO user (username, password, mail, date_creation, alias, is_admin) VALUES ('{username}', '{mdp}', '{mail}', NOW(), '{alias}', '1')"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Général', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Blabla', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Comptabilité', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Informatique', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+        create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Marketing', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
+        cursor = conn.cursor()
+        cursor.execute(create_user_query)
+        conn.commit()
+        cursor.close()
+
+def show_signup_window():
+    global signup_window
+    signup_window = Sign_up()
+    signup_window.show()
 
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
+        w = Login()
+        w.show()
         window = Window()
-        window.show()
+
+        w.signup_window_signal.connect(show_signup_window)
+
         sys.exit(app.exec())
 
     finally :

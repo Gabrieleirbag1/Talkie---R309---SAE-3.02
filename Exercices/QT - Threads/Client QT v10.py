@@ -1,18 +1,41 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import sys, socket, time, datetime
+import sys, socket, time, datetime, os
+
+
+def get_address_ip():
+    # utilisation d'un DNS public pour obtenir l'adresse IP externe
+    try:
+        address_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        address_socket.connect(("8.8.8.8", 80))
+        address_ip = address_socket.getsockname()[0]
+        address_socket.close()
+        print(address_ip)
+        return address_ip
+    except socket.error:
+        return None
 
 flag = False
-host, port = ('127.0.0.1', 11111)
+
+host, port = (str(get_address_ip()), 11111)
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 receiver_thread = None
 MainWindow = None
 username = None
 password = None
 signup_window = None
+photo_window = None
 Courrierwindow = None
+Profilwindow = None
+mois= None
+mois2 = None
+mois3 = None
+mois4 = None
+mois5 = None
 
+photo_dico = {"Nom": ["bear", "christmas", "demon", "nerd", "skull", "caca", "grenouille", "chien", "bomb", "clown", "fleur", "tortue"], "Photo": ["🐻", "🎅", "👿", "🤓", "💀", "💩", "🐸", "🐶", "💣", "🤡", "🌸", "🐢"]}
 
 class SenderThread(QThread):
     error_connected = pyqtSignal(str, str)
@@ -50,6 +73,7 @@ class ReceptionThread(QThread):
     users_sended = pyqtSignal(str)
     demande_received = pyqtSignal(str)
     demandeliste_received = pyqtSignal(str)
+    info_profil = pyqtSignal(str)
     def __init__(self):
         super().__init__()
 
@@ -76,8 +100,8 @@ class ReceptionThread(QThread):
                     #print(f'Reception de : {users}')
                 
                 elif code[0] == "DEMANDE":
-                    try:
-                        demande = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}|{code[5]}|{code[6]}"#demandeur, type, concerne, date
+                    try:# dans le cas d'un autre format de demande ou y a pas le code 6
+                        demande = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}|{code[5]}|{code[6]}"
                     except:
                         demande = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}|{code[5]}"
                     print(f'Reception de : {reply} filtré en {demande}')
@@ -87,6 +111,12 @@ class ReceptionThread(QThread):
                     demande = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}" #demandeur, type, concerne, date
                     print(f'Reception de : {reply} filtré en {demande}')
                     self.demandeliste_received.emit(demande)
+
+                elif code[0] == "PROFIL":
+                    profil = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}|{code[5]}|{code[6]}|{code[7]}"
+                    print(f'Reception de : {reply} filtré en {profil}')
+                    self.info_profil.emit(profil)
+
                     
                 else:
                     #print(f'Reception de : {reply}')
@@ -141,6 +171,13 @@ class ConnectThread(QThread):
             self.connect4.connect(self.sender4)
             self.connect5.connect(self.sender5)
 
+            self.send.returnPressed.connect(self.sender)
+            self.send2.returnPressed.connect(self.sender2)
+            self.send3.returnPressed.connect(self.sender3)
+            self.send4.returnPressed.connect(self.sender4)
+            self.send5.returnPressed.connect(self.sender5)
+            
+
             receiver_thread.message_received.connect(self.update_reply)    
             receiver_thread.start()
 
@@ -152,28 +189,80 @@ class ConnectThread(QThread):
         
     def update_reply(self, message):
         message = message.split("|")
+        entete = message[1].split("-")
+        date = entete[0].split(" ")
 
         if message[0] == 'Général':
-            self.log.append(f'{message[1]}{message[2]}')
+            if self.check_date(date[0]):
+                self.log.append(f'──────────────────────────────────{date[0]}──────────────────────────────────')
+            self.log.append(f'{date[1]} -{entete[1]} {message[2]}')
 
         elif message[0] == 'Blabla':
-            self.log2.append(f'{message[1]}{message[2]}')
+            if self.check_date2(date[0]):
+                self.log2.append(f'──────────────────────────────────{date[0]}──────────────────────────────────')
+            self.log2.append(f'{date[1]} -{entete[1]} {message[2]}')
         
         elif message[0] == 'Comptabilité':
-            self.log3.append(f'{message[1]}{message[2]}') 
+            if self.check_date3(date[0]):
+                self.log3.append(f'──────────────────────────────────{date[0]}──────────────────────────────────')
+            self.log3.append(f'{date[1]} -{entete[1]} {message[2]}') 
         
         elif message[0] == 'Informatique':
-            self.log4.append(f'{message[1]}{message[2]}')
+            if self.check_date4(date[0]):
+                self.log4.append(f'──────────────────────────────────{date[0]}──────────────────────────────────')
+            self.log4.append(f'{date[1]} -{entete[1]} {message[2]}')
         
         elif message[0] == 'Marketing':
-            self.log5.append(f'{message[1]}{message[2]}')
+            if self.check_date5(date[0]):
+                self.log5.append(f'──────────────────────────────────{date[0]}──────────────────────────────────')
+            self.log5.append(f'{date[1]} -{entete[1]} {message[2]}')
 
         elif message[0] == 'Serveur':
-            self.log.append(f'{message[1]}{message[2]}')
-            self.log2.append(f'{message[1]}{message[2]}')
-            self.log3.append(f'{message[1]}{message[2]}')
-            self.log4.append(f'{message[1]}{message[2]}')
-            self.log5.append(f'{message[1]}{message[2]}')
+            self.log.append(f'<b>{date[1]} -{entete[1]} {message[2]}</b>')
+            self.log2.append(f'<b>{date[1]} -{entete[1]} {message[2]}</b>')
+            self.log3.append(f'<b>{date[1]} -{entete[1]} {message[2]}</b>')
+            self.log4.append(f'<b>{date[1]} -{entete[1]} {message[2]}</b>')
+            self.log5.append(f'<b>{date[1]} -{entete[1]} {message[2]}</b>')
+
+    def check_date(self, date):
+        global mois
+        if date != mois:
+            mois = date
+            return True
+        else:
+            return False
+        
+    def check_date2(self, date):
+        global mois2
+        if date != mois2:
+            mois2 = date
+            return True
+        else:
+            return False
+        
+    def check_date3(self, date):
+        global mois3
+        if date != mois3:
+            mois3 = date
+            return True
+        else:
+            return False
+        
+    def check_date4(self, date):
+        global mois4
+        if date != mois4:
+            mois4 = date
+            return True
+        else:
+            return False
+        
+    def check_date5(self, date):
+        global mois5
+        if date != mois5:
+            mois5 = date
+            return True
+        else:
+            return False
 
     def sender(self):
         global client_socket, username, password
@@ -226,6 +315,13 @@ class Window(QObject):
     global MainWindow
     def setupUi(self, MainWindow):
         global receiver_thread
+
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_main.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+
+        MainWindow.setStyleSheet(stylesheet)
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1000, 700)
         font = QFont()
@@ -242,6 +338,7 @@ class Window(QObject):
         self.text_edit.setGeometry(QRect(20, 20, 721, 481))
         self.text_edit.setObjectName("text_edit")
         self.text_edit.setReadOnly(True)
+
         self.users_text_edit = QTextEdit(self.tab)
         self.users_text_edit.setGeometry(QRect(770, 110, 183, 390))
         self.users_text_edit.setObjectName("users_text_edit")
@@ -255,9 +352,10 @@ class Window(QObject):
         self.label.setMinimumSize(QSize(271, 21))
         self.label.setFont(font)
         self.label.setObjectName("label")
-        self.profil_button2 = QPushButton(self.tab)
-        self.profil_button2.setGeometry(QRect(770, 20, 81, 71))
-        self.profil_button2.setObjectName("profil_button2")
+        self.profil_button = QPushButton(self.tab)
+        self.profil_button.setGeometry(QRect(770, 20, 81, 71))
+        self.profil_button.setObjectName("profil_button")
+        self.profil_button.setFont(QFont('Arial', 40))
         self.courrier_button = QPushButton(self.tab)
         self.courrier_button.setGeometry(QRect(872, 20, 81, 71))
         self.courrier_button.setObjectName("courrier_button")
@@ -275,7 +373,7 @@ class Window(QObject):
         self.tab_2.setObjectName("tab_2")
         self.text_edit2 = QTextEdit(self.tab_2)
         self.text_edit2.setGeometry(QRect(20, 20, 721, 481))
-        self.text_edit2.setObjectName("text_edit")
+        self.text_edit2.setObjectName("text_edit2")
         self.text_edit2.setReadOnly(True)
         self.users_text_edit2 = QTextEdit(self.tab_2)
         self.users_text_edit2.setGeometry(QRect(770, 110, 183, 390))
@@ -283,16 +381,17 @@ class Window(QObject):
         self.users_text_edit2.setReadOnly(True)
         self.line_edit2 = QLineEdit(self.tab_2)
         self.line_edit2.setGeometry(QRect(20, 560, 721, 51))
-        self.line_edit2.setObjectName("lineEdit")
+        self.line_edit2.setObjectName("lineEdit2")
         self.line_edit2.setMaxLength(255)
         self.label2 = QLabel(self.tab_2)
         self.label2.setGeometry(QRect(20, 510, 271, 41))
         self.label2.setMinimumSize(QSize(271, 21))
         self.label2.setFont(font)
-        self.label2.setObjectName("label")
-        self.profil_button3 = QPushButton(self.tab_2)
-        self.profil_button3.setGeometry(QRect(770, 20, 81, 71))
-        self.profil_button3.setObjectName("profil_button3")
+        self.label2.setObjectName("label2")
+        self.profil_button2 = QPushButton(self.tab_2)
+        self.profil_button2.setGeometry(QRect(770, 20, 81, 71))
+        self.profil_button2.setObjectName("profil_button2")
+        self.profil_button2.setFont(QFont('Arial', 40))
         self.courrier_button2 = QPushButton(self.tab_2)
         self.courrier_button2.setGeometry(QRect(872, 20, 81, 71))
         self.courrier_button2.setObjectName("courrier_button2")
@@ -309,7 +408,7 @@ class Window(QObject):
         self.tab_3.setObjectName("tab_3")
         self.text_edit3 = QTextEdit(self.tab_3)
         self.text_edit3.setGeometry(QRect(20, 20, 721, 481))
-        self.text_edit3.setObjectName("text_edit")
+        self.text_edit3.setObjectName("text_edit3")
         self.text_edit3.setReadOnly(True)
         self.users_text_edit3 = QTextEdit(self.tab_3)
         self.users_text_edit3.setGeometry(QRect(770, 110, 183, 390))
@@ -317,16 +416,17 @@ class Window(QObject):
         self.users_text_edit3.setReadOnly(True)
         self.line_edit3 = QLineEdit(self.tab_3)
         self.line_edit3.setGeometry(QRect(20, 560, 721, 51))
-        self.line_edit3.setObjectName("lineEdit")
+        self.line_edit3.setObjectName("lineEdit3")
         self.line_edit3.setMaxLength(255)
         self.label3 = QLabel(self.tab_3)
         self.label3.setGeometry(QRect(20, 510, 271, 41))
         self.label3.setMinimumSize(QSize(271, 21))
         self.label3.setFont(font)
-        self.label3.setObjectName("label")
-        self.profil_button4 = QPushButton(self.tab_3)
-        self.profil_button4.setGeometry(QRect(770, 20, 81, 71))
-        self.profil_button4.setObjectName("profil_button4")
+        self.label3.setObjectName("label3")
+        self.profil_button3 = QPushButton(self.tab_3)
+        self.profil_button3.setGeometry(QRect(770, 20, 81, 71))
+        self.profil_button3.setObjectName("profil_button3")
+        self.profil_button3.setFont(QFont('Arial', 40))
         self.courrier_button3 = QPushButton(self.tab_3)
         self.courrier_button3.setGeometry(QRect(872, 20, 81, 71))
         self.courrier_button3.setObjectName("courrier_button3")
@@ -343,7 +443,7 @@ class Window(QObject):
         self.tab_4.setObjectName("tab_4")
         self.text_edit4 = QTextEdit(self.tab_4)
         self.text_edit4.setGeometry(QRect(20, 20, 721, 481))
-        self.text_edit4.setObjectName("text_edit")
+        self.text_edit4.setObjectName("text_edit4")
         self.text_edit4.setReadOnly(True)
         self.users_text_edit4 = QTextEdit(self.tab_4)
         self.users_text_edit4.setGeometry(QRect(770, 110, 183, 390))
@@ -351,16 +451,17 @@ class Window(QObject):
         self.users_text_edit4.setReadOnly(True)
         self.line_edit4 = QLineEdit(self.tab_4)
         self.line_edit4.setGeometry(QRect(20, 560, 721, 51))
-        self.line_edit4.setObjectName("lineEdit")
+        self.line_edit4.setObjectName("lineEdit4")
         self.line_edit4.setMaxLength(255)
         self.label4 = QLabel(self.tab_4)
         self.label4.setGeometry(QRect(20, 510, 271, 41))
         self.label4.setMinimumSize(QSize(271, 21))
         self.label4.setFont(font)
-        self.label4.setObjectName("label")
-        self.profil_button5 = QPushButton(self.tab_4)
-        self.profil_button5.setGeometry(QRect(770, 20, 81, 71))
-        self.profil_button5.setObjectName("profil_button5")
+        self.label4.setObjectName("label4")
+        self.profil_button4 = QPushButton(self.tab_4)
+        self.profil_button4.setGeometry(QRect(770, 20, 81, 71))
+        self.profil_button4.setObjectName("profil_button4")
+        self.profil_button4.setFont(QFont('Arial', 40))
         self.courrier_button4 = QPushButton(self.tab_4)
         self.courrier_button4.setGeometry(QRect(872, 20, 81, 71))
         self.courrier_button4.setObjectName("courrier_button4")
@@ -377,7 +478,7 @@ class Window(QObject):
         self.tab_5.setObjectName("tab_5")
         self.text_edit5 = QTextEdit(self.tab_5)
         self.text_edit5.setGeometry(QRect(20, 20, 721, 481))
-        self.text_edit5.setObjectName("text_edit")
+        self.text_edit5.setObjectName("text_edit5")
         self.text_edit5.setReadOnly(True)
         self.users_text_edit5 = QTextEdit(self.tab_5)
         self.users_text_edit5.setGeometry(QRect(770, 110, 183, 390))
@@ -385,16 +486,17 @@ class Window(QObject):
         self.users_text_edit5.setReadOnly(True)
         self.line_edit5 = QLineEdit(self.tab_5)
         self.line_edit5.setGeometry(QRect(20, 560, 721, 51))
-        self.line_edit5.setObjectName("lineEdit")
+        self.line_edit5.setObjectName("lineEdit5")
         self.line_edit5.setMaxLength(255)
         self.label5 = QLabel(self.tab_5)
         self.label5.setGeometry(QRect(20, 510, 271, 41))
         self.label5.setMinimumSize(QSize(271, 21))
         self.label5.setFont(font)
-        self.label5.setObjectName("label")
-        self.profil_button6 = QPushButton(self.tab_5)
-        self.profil_button6.setGeometry(QRect(770, 20, 81, 71))
-        self.profil_button6.setObjectName("profil_button6")
+        self.label5.setObjectName("label5")
+        self.profil_button5 = QPushButton(self.tab_5)
+        self.profil_button5.setGeometry(QRect(770, 20, 81, 71))
+        self.profil_button5.setObjectName("profil_button5")
+        self.profil_button5.setFont(QFont('Arial', 40))
         self.courrier_button5 = QPushButton(self.tab_5)
         self.courrier_button5.setGeometry(QRect(872, 20, 81, 71))
         self.courrier_button5.setObjectName("courrier_button5")
@@ -414,9 +516,11 @@ class Window(QObject):
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setGeometry(QRect(0, 0, 886, 22))
         self.menubar.setObjectName("menubar")
+ 
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
+
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
@@ -432,6 +536,12 @@ class Window(QObject):
         self.courrier_button4.clicked.connect(self.courrier_window)
         self.courrier_button5.clicked.connect(self.courrier_window)
 
+        self.profil_button.clicked.connect(self.profil_window)
+        self.profil_button2.clicked.connect(self.profil_window)
+        self.profil_button3.clicked.connect(self.profil_window)
+        self.profil_button4.clicked.connect(self.profil_window)
+        self.profil_button5.clicked.connect(self.profil_window)
+
         try:
             receiver_thread.success_connected.connect(self.history_code)
             receiver_thread.users_sended.connect(self.users_show)
@@ -442,6 +552,10 @@ class Window(QObject):
         global Courrierwindow
         Courrierwindow.show()
 
+    def profil_window(self):
+        global Profilwindow
+        Profilwindow.show()
+    
     def mainthread(self):
         log = self.text_edit
         send = self.line_edit
@@ -465,8 +579,6 @@ class Window(QObject):
 
         self.accept_thread = ConnectThread(log, send, connect, log2, send2, connect2, log3, send3, connect3, log4, send4, connect4, log5, send5, connect5)
         self.accept_thread.start()
-
-        self.label.setText(f"Messagerie (Connecté)")
 
 
     def users_show(self, users):
@@ -531,6 +643,7 @@ class Window(QObject):
                 if int(code) > 9:
                     if code == '10':
                         self.tabWidget.setTabEnabled(0, False)
+                        self.tabWidget.Colo
                     
                     elif code == "11":
                         self.tabWidget.setTabEnabled(1, False)
@@ -561,6 +674,9 @@ class Window(QObject):
                     
                     elif code == "25":
                         self.errorbox(code)
+                    
+                    elif code == "31":
+                        self.successBox2(code)
             except:
                 if int(code200) == 27:
                     if code20[1] == "Blabla":
@@ -572,22 +688,29 @@ class Window(QObject):
                     elif code20[1] == "Marketing":
                         self.tabWidget.setTabEnabled(4, True)
 
-                    self.successBox(code20[1])
+                    self.successBox(code200, code20[1])
                 else:
                     pass
         except:
             pass
 
-    def successBox(self, salon):
-
-        print("zmovnno")
+    def successBox(self, code200, concerne):
         success = QMessageBox()
         success.setWindowTitle("Succès")
-        content = f"Vous à présent acces au salon {salon} !"
+        content = f"Vous à présent acces au salon {concerne} !"
         success.setIcon(QMessageBox.Information)
         success.setText(content)
         success.exec()
-        print("glbsktf")
+    
+    def successBox2(self, code):
+        success = QMessageBox()
+        success.setWindowTitle("Succès")
+        content = f"Vous possédez maintenant les droits administrateurs."
+        success.setIcon(QMessageBox.Information)
+        success.setText(content)
+        success.exec()
+    
+
 
     def errorbox(self, code):
         error = QMessageBox()
@@ -612,7 +735,6 @@ class Window(QObject):
         error.exec()
 
         if quit:
-            print("TRUE")
             self.quitter()
 
     def quitter(self):
@@ -620,26 +742,26 @@ class Window(QObject):
 
     def retranslateUi(self, MainWindow):
         _translate = QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Skype"))
-        self.label.setText(_translate("MainWindow", "Messagerie"))
-        self.profil_button2.setText(_translate("MainWindow", "PROFIL"))
-        self.courrier_button.setText(_translate("MainWindow", "✉"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Talkie"))
+        self.label.setText(_translate("MainWindow", "Messagerie :"))
+        self.profil_button.setText(_translate("MainWindow", "👤"))
+        self.courrier_button.setText(_translate("MainWindow", "📨"))
         self.send_button.setText(_translate("MainWindow", ">"))
-        self.label2.setText(_translate("MainWindow", "Messagerie"))
-        self.profil_button3.setText(_translate("MainWindow", "PROFIL"))
-        self.courrier_button2.setText(_translate("MainWindow", "✉"))
+        self.label2.setText(_translate("MainWindow", "Messagerie :"))
+        self.profil_button2.setText(_translate("MainWindow", "👤"))
+        self.courrier_button2.setText(_translate("MainWindow", "📨"))
         self.send_button2.setText(_translate("MainWindow", ">"))
-        self.label3.setText(_translate("MainWindow", "Messagerie"))
-        self.profil_button4.setText(_translate("MainWindow", "PROFIL"))
-        self.courrier_button3.setText(_translate("MainWindow", "✉"))
+        self.label3.setText(_translate("MainWindow", "Messagerie :"))
+        self.profil_button3.setText(_translate("MainWindow", "👤"))
+        self.courrier_button3.setText(_translate("MainWindow", "📨"))
         self.send_button3.setText(_translate("MainWindow", ">"))
-        self.label4.setText(_translate("MainWindow", "Messagerie"))
-        self.profil_button5.setText(_translate("MainWindow", "PROFIL"))
-        self.courrier_button4.setText(_translate("MainWindow", "✉"))
+        self.label4.setText(_translate("MainWindow", "Messagerie :"))
+        self.profil_button4.setText(_translate("MainWindow", "👤"))
+        self.courrier_button4.setText(_translate("MainWindow", "📨"))
         self.send_button4.setText(_translate("MainWindow", ">"))
-        self.label5.setText(_translate("MainWindow", "Messagerie"))
-        self.profil_button6.setText(_translate("MainWindow", "PROFIL"))
-        self.courrier_button5.setText(_translate("MainWindow", "✉"))
+        self.label5.setText(_translate("MainWindow", "Messagerie :"))
+        self.profil_button5.setText(_translate("MainWindow", "👤"))
+        self.courrier_button5.setText(_translate("MainWindow", "📨"))
         self.send_button5.setText(_translate("MainWindow", ">"))
 
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Général"))
@@ -838,8 +960,14 @@ class Sign_up(QMainWindow):
         self.line_edit_5.setMaxLength(45)
         self.line_edit_5.setEchoMode(QLineEdit.Password)
 
+        self.line_edit.returnPressed.connect(self.sign_up)
+        self.line_edit_2.returnPressed.connect(self.sign_up)
+        self.line_edit_3.returnPressed.connect(self.sign_up)
+        self.line_edit_4.returnPressed.connect(self.sign_up)
+        self.line_edit_5.returnPressed.connect(self.sign_up)
+
         self.signup_button = QPushButton(self)
-        self.signup_button.setGeometry(QRect(150, 520, 131, 41))
+        self.signup_button.setGeometry(QRect(150, 520, 140, 41))
         self.signup_button.setFont(font)
         self.signup_button.setObjectName("pushButton")
         self.signup_button.setText("S'inscrire")
@@ -931,16 +1059,23 @@ class CourrierWidget(QWidget):
             self.comboBox.addItem("Marketing")
             layout.addWidget(self.comboBox)
 
+
         elif type == "Ami":
             self.comboBox2 = QComboBox(self)
             layout.addWidget(self.comboBox2)
 
         layout.addWidget(self.label)
 
+        print(self.readonly)
         if self.readonly:
+            print("here")
             self.label.setEnabled(False)
-            self.comboBox.setEnabled(False)
-            self.comboBox.setCurrentText(self.concerne)
+            print("zozo")
+            try:
+                self.comboBox.setEnabled(False)
+                self.comboBox.setCurrentText(self.concerne)
+            except AttributeError:
+                pass
 
         else:
             self.button = QPushButton("Envoyer", self)
@@ -954,15 +1089,20 @@ class CourrierWidget(QWidget):
                 self.demande_salon(username)
             elif type == "Admin":
                 self.demande_admin(username)
+                self.label.setEnabled(False)
+                self.button.deleteLater()
             elif type == "Ami":
                 self.demande_ami(username)
         except Exception as e:
             print(e)
-            
-        if self.comboBox.currentText() != "":
-            self.label.setEnabled(False)
-            self.comboBox.setEnabled(False)
-            self.button.deleteLater()
+        
+        try:
+            if self.comboBox.currentText() != "":
+                self.label.setEnabled(False)
+                self.button.deleteLater()
+                self.comboBox.setEnabled(False)
+        except AttributeError:
+            pass
         
 
 
@@ -992,10 +1132,12 @@ class CourrierWidget(QWidget):
         self.sender_thread.wait()
 
 class CourrierReception(QWidget):
-    def __init__(self, demande, text):
+    def __init__(self, demande, text, list_widget2, item):
         super().__init__()
 
         self.text = text
+        self.list_widget2 = list_widget2
+        self.item = item
 
         self.setupUI(demande)
 
@@ -1036,7 +1178,7 @@ class CourrierReception(QWidget):
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
-        self.deleteLater()
+        self.remove_from_list_widget()
 
     def refuse(self):
         reply = self.text.split("|")
@@ -1044,7 +1186,7 @@ class CourrierReception(QWidget):
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
-        self.deleteLater()
+        self.remove_from_list_widget()
 
     def delete(self):
         print("delete")
@@ -1058,7 +1200,13 @@ class CourrierReception(QWidget):
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
-        self.deleteLater()
+
+        self.remove_from_list_widget()
+
+    def remove_from_list_widget(self):
+        row = self.list_widget2.row(self.item)
+        self.list_widget2.takeItem(row)
+        
 
 class CourrierWindow(QObject):
     global receiver_thread
@@ -1109,14 +1257,22 @@ class CourrierWindow(QObject):
             self.errorBox(code)
         elif code == "28":
             self.errorBox(code)
+        elif code == "29":
+            self.errorBox(code)
+        elif code == "30":
+            self.errorBox(code)
 
     def errorBox(self, code):
         error = QMessageBox()
         error.setWindowTitle("Erreur")
         if code == '26':
-            content = "(26) Vous avez déjà acces à ce salon"
+            content = "(26) Vous avez déjà acces à ce salon."
         elif code == '28':
-            content = "(28) Vous avez déjà demandé l'accès à ce salon"
+            content = "(28) Vous avez déjà demandé l'accès à ce salon."
+        elif code == '29':
+            content = "(29) L'utilisateur a déjà accès à ce salon."
+        elif code == '30':
+            content = "(30) Vous êtes déjà un super utilisateur."
         else:
             content = "Erreur inconnue"
 
@@ -1168,6 +1324,7 @@ class CourrierWindow(QObject):
 
         elif demandeliste[1] == "Admin":
             text = f"{demandeliste[3]}\nDemande des droits d'administration."
+            concerne = "Admin"
             type = "Admin"
 
         elif demandeliste[1] == "Ami":
@@ -1200,28 +1357,235 @@ class CourrierWindow(QObject):
         if demande[1] == "Reponse" or rep == "1":
             type2 = "Reponse"
             reponse = demande[4].split("/")
-            if reponse[1] == "Salon":
+            print(reponse)
+            if demande[2] == "Admin":
+                if reponse[0] == "0":
+                    demande = f"{demande[3]}\nLes droits administrateur vous ont été refusé."
+                elif reponse[0] == '1':
+                    demande = f"{demande[3]}\nLes droits administrateur vous ont été accordé."
+            elif reponse[1] == "Salon":
                 if reponse[0] == "0":
                     print(0)
                     demande = f"{demande[3]}\nL'accès au salon {demande[2]} vous est refusé."
                 elif reponse[0] == '1':
                     print(1)
                     demande = f"{demande[3]}\nL'accès au salon {demande[2]} vous est accordé."
+
                     
         elif demande[1] == "Salon":   
             demande = f"{date}\n{demande[0]} demande l'accès au salon {demande[2]}."
             type2 = "Salon"
 
-        line_widget2 = CourrierReception(demande, text)
+        elif demande[1] == "Admin":
+            demande = f"{date}\n{demande[0]} demande les droits administrateur."
+            type2 = "Admin"
 
         item = QListWidgetItem(self.list_widget2)
+        line_widget2 = CourrierReception(demande, text, self.list_widget2, item)
         item.setSizeHint(line_widget2.sizeHint())  # Définir la hauteur de l'élément
         self.list_widget2.addItem(item)
         self.list_widget2.setItemWidget(item, line_widget2)
         self.line_widgets2.append(line_widget2)
 
+class ProfilWindow(QObject):
+    global receiver_thread, photo_window
+    def setupUi(self, Profilwindow):
+        Profilwindow.setObjectName("Profilwindow")
+        Profilwindow.setWindowTitle("Profil")
+        Profilwindow.resize(393, 326)
+        font = QFont()
+        font.setPointSize(14)
 
+        fontbold = QFont()
+        fontbold.setPointSize(14)
+        fontbold.setBold(True)
 
+        fontunderline = QFont()
+        fontunderline.setPointSize(14)
+        fontunderline.setUnderline(True)
+
+        self.username = QLabel(Profilwindow)
+        self.username.setGeometry(QRect(20, 10, 171, 41))
+        self.username.setFont(fontbold)
+        self.username.setObjectName("username")
+
+        self.alias = QLabel(Profilwindow)
+        self.alias.setGeometry(QRect(20, 40, 171, 41))
+        self.alias.setFont(font)
+        self.alias.setObjectName("alias")
+
+        self.mail = QLabel(Profilwindow)
+        self.mail.setGeometry(QRect(20, 70, 171, 41))
+        self.mail.setFont(fontunderline)
+        self.mail.setObjectName("mail")
+
+        self.description = QLabel(Profilwindow)
+        self.description.setGeometry(QRect(20, 120, 171, 21))
+        self.description.setFont(font)
+        self.description.setObjectName("description")
+        self.description.setText("Description :")
+
+        self.description_text_edit = QTextEdit(Profilwindow)
+        self.description_text_edit.setGeometry(QRect(20, 150, 351, 121))
+        self.description_text_edit.setObjectName("description_text_edit")
+
+        self.enregistrer_button = QPushButton(Profilwindow)
+        self.enregistrer_button.setGeometry(QRect(280, 280, 89, 25))
+        self.enregistrer_button.setObjectName("enregistrer_button")
+        self.enregistrer_button.setText("Enregistrer")
+        self.enregistrer_button.clicked.connect(self.description_update)
+
+        self.photo = QPushButton(Profilwindow)
+        self.photo.setGeometry(QRect(230, 0, 141, 151))
+        font2 = QFont()
+        font2.setPointSize(100)
+        self.photo.setFont(font2)
+        self.photo.setObjectName("photo")
+        self.photo.setStyleSheet('''
+            QPushButton {
+                border: none;
+                background-color: transparent; /* Couleur de fond */
+            }
+        ''')
+        self.photo.clicked.connect(self.photo_show)
+
+        font3 = QFont()
+        font3.setPointSize(10)
+        font3.setItalic(True)
+        self.date_profil = QLabel(Profilwindow)
+        self.date_profil.setGeometry(QRect(20, 280, 231, 21))
+        self.date_profil.setFont(font3)
+        self.date_profil.setObjectName("date_profil")
+
+        self.description_text_edit.textChanged.connect(self.limit_text_length)
+        receiver_thread.info_profil.connect(self.profil)
+        photo_window.photo_change.connect(self.photo_update)
+    
+    def profil(self, info_profil):
+        info_profil = info_profil.split("|")
+
+        if info_profil[3] == "1":
+            admin_icon = "👑"
+        else:
+            admin_icon = ""
+
+        index_nom = photo_dico['Nom'].index(info_profil[6])
+        photo = photo_dico['Photo'][index_nom]
+
+        desc = None if info_profil[4] == "None" else info_profil[4]
+
+        date = info_profil[5].split(" ")
+
+        self.username.setText(f"@{info_profil[0]}{admin_icon}")
+        self.alias.setText(info_profil[1])
+        self.mail.setText(info_profil[2])
+        self.photo.setText(photo)
+        self.description_text_edit.setText(desc)
+        self.date_profil.setText(f"Compte créé le {date[0]} à {date[1]}")
+
+    def limit_text_length(self):
+        max_length = 300
+        current_length = len(self.description_text_edit.toPlainText())
+
+        if current_length > max_length:
+            cursor = self.description_text_edit.textCursor()
+            cursor.deletePreviousChar()  # Supprimer le dernier caractère si la limite est dépassée
+
+    def description_update(self):
+        reply = f"PROFIL|Description|{self.description_text_edit.toPlainText()}"
+        self.sender_thread = SenderThread(reply)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    def photo_update(self, photo):
+        self.photo.setText(photo)
+
+    def photo_show(self):
+        photo_window.show()
+    
+class PhotoWindow(QMainWindow):
+    photo_change = pyqtSignal(str)
+    def __init__(self, parent = None):
+        super(PhotoWindow, self).__init__(parent)
+
+        self.setupUI()
+
+    def setupUI(self):
+        self.setWindowTitle("Choisir une image")
+        self.resize(400, 300)
+        self.bear = QPushButton("🐻")
+        self.christmas = QPushButton("🎅")
+        self.demon = QPushButton("👿")
+        self.nerd = QPushButton("🤓")
+        self.skull = QPushButton("💀")
+        self.caca = QPushButton("💩")
+        self.grenouille = QPushButton("🐸")
+        self.chien = QPushButton("🐶")
+        self.bomb = QPushButton("💣")
+        self.clown = QPushButton("🤡")
+        self.fleur = QPushButton("🌸")
+        self.tortue = QPushButton("🐢")
+
+        font = QFont()
+        font.setPointSize(40)  # Définir la taille de police à 40
+
+        # Appliquer la police à tous les boutons
+        self.bear.setFont(font)
+        self.christmas.setFont(font)
+        self.demon.setFont(font)
+        self.nerd.setFont(font)
+        self.skull.setFont(font)
+        self.caca.setFont(font)
+        self.grenouille.setFont(font)
+        self.chien.setFont(font)
+        self.bomb.setFont(font)
+        self.clown.setFont(font)
+        self.fleur.setFont(font)
+        self.tortue.setFont(font)
+        layout = QGridLayout()
+
+        layout.addWidget(self.bear, 0, 0)
+        layout.addWidget(self.christmas, 0, 1)
+        layout.addWidget(self.demon, 0, 2)
+        layout.addWidget(self.nerd, 1, 0)
+        layout.addWidget(self.skull, 1, 1)
+        layout.addWidget(self.caca, 1, 2)
+        layout.addWidget(self.grenouille, 2, 0)
+        layout.addWidget(self.chien, 2, 1)
+        layout.addWidget(self.bomb, 2, 2)
+        layout.addWidget(self.clown, 3, 0)
+        layout.addWidget(self.fleur, 3, 1)
+        layout.addWidget(self.tortue, 3, 2)
+        
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
+
+        self.bear.clicked.connect(lambda: self.photo_update("🐻"))
+        self.christmas.clicked.connect(lambda: self.photo_update("🎅"))
+        self.demon.clicked.connect(lambda: self.photo_update("👿"))
+        self.nerd.clicked.connect(lambda: self.photo_update("🤓"))
+        self.skull.clicked.connect(lambda: self.photo_update("💀"))
+        self.caca.clicked.connect(lambda: self.photo_update("💩"))
+        self.grenouille.clicked.connect(lambda: self.photo_update("🐸"))
+        self.chien.clicked.connect(lambda: self.photo_update("🐶"))
+        self.bomb.clicked.connect(lambda: self.photo_update("💣"))
+        self.clown.clicked.connect(lambda: self.photo_update("🤡"))
+        self.fleur.clicked.connect(lambda: self.photo_update("🌸"))
+        self.tortue.clicked.connect(lambda: self.photo_update("🐢"))
+
+    def photo_update(self, photo):
+        self.photo_change.emit(photo)
+
+        index_photo = photo_dico['Photo'].index(photo)
+        nom_photo = photo_dico['Nom'][index_photo]
+
+        reply = f"PROFIL|Photo|{nom_photo}"
+        self.sender_thread = SenderThread(reply)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+        self.close()
+        
 def show_signup_window():
     global signup_window
     signup_window = Sign_up()
@@ -1244,12 +1608,18 @@ if __name__ == "__main__":
         w = Login()
         w.show()
 
+        photo_window = PhotoWindow()
+
         Courrierwindow = QMainWindow()
         courrier_window = CourrierWindow()
+        Profilwindow = QMainWindow()
+        profil_window = ProfilWindow()
         courrier_window.setupUi(Courrierwindow)
+        profil_window.setupUi(Profilwindow)
 
         # Connecter le signal show_self_signal à la fonction d'affichage de l'inscription
         w.signup_window_signal.connect(show_signup_window)
+        
 
         sys.exit(app.exec_())
     finally:
