@@ -1,0 +1,113 @@
+QLabel{
+    color: #f0f0f0;
+    background-color: transparent;
+}
+
+QMainWindow{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(26, 54, 114, 1), stop: 1 rgba(13, 13, 110, 1));
+}
+
+QPushButton{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 23, 65, 1), stop: 1 rgba(4, 54, 121, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QComboBox{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 23, 65, 1), stop: 1 rgba(4, 54, 121, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QComboBox QAbstractItemView{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 23, 65, 1), stop: 1 rgba(4, 54, 121, 1));
+    color: #f0f0f0; /* Light gray text color */
+}
+
+QComboBox:hover{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 42, 65, 1), stop: 1 rgba(0, 73, 116, 1));
+    color: #f0f0f0; /* Light gray text color */
+}
+
+QPushButton:hover{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 42, 65, 1), stop: 1 rgba(0, 73, 116, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QLineEdit{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 36, 65, 1), stop: 1 rgba(0, 104, 165, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QTextEdit{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(1, 21, 65, 1), stop: 1 rgba(0, 77, 165, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QListWidget{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(3, 36, 80, 1), stop: 1 rgba(61, 66, 71, 1));
+    border-radius: 6px;
+    color: #f0f0f0; /* Light gray text color */
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QComboBox:disabled {
+    color:darkgray
+}
+QComboBox:disabled QAbstractItemView{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(44, 54, 73, 1), stop: 1 rgba(53, 78, 110, 1));
+    color: darkgray; /* Light gray text color */
+}
+
+QLabel:disabled {
+    color:darkgray
+}
+
+QWidget#tab {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(11, 38, 112, 1), stop: 1 rgba(0, 35, 80, 1));
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QWidget#tab_2 {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(11, 38, 112, 1), stop: 1 rgba(0, 35, 80, 1));
+    border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+
+QTabWidget{
+    background-color: rgb(23, 23, 24);
+}
+
+QTabBar::tab {
+    background-color: rgba(30, 53, 128, 255);
+    color: #f0f0f0;
+}
+
+QTabBar::tab:disabled {
+    background-color: gray; /* Couleur de fond des onglets désactivés */
+}
+
+QTabBar::tab:selected {
+    background-color: rgba(30, 72, 128, 255); /* Couleur de fond lorsque l'onglet est actif */
+}
+
+QTabBar::tab:hover {
+    background-color: rgba(30, 72, 128, 255); /* Couleur de fond lorsque l'onglet est actif */
+}
+
+QMessageBox{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(11, 38, 112, 1), stop: 1 rgba(0, 35, 80, 1));
+    color: #f0f0f0; /* Light gray text color */
+}
+
+QScrollBar:vertical {
+                background: #1e1e1e;
+}

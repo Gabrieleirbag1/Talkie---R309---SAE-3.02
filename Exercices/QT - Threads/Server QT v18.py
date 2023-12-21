@@ -3,168 +3,38 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import socket, mysql.connector, datetime, sys, re, time, threading
 
-try: #ouverture de la connexion mysql
+try:
     conn = mysql.connector.connect(
-        host='localhost', #host
-        user='gab', #utilisateur
-        password='', #mdp assigné (ici aucun)
-        database='Skype' #nom de la db
+        host='localhost',
+        user='gab',
+        password='',
+        database='Skype'
     )
 except Exception as e:
-    print(e) #impression de l'éventuelle échec de connexion à la bdd mysql
+    print(e)
 
 
 window = None
 flag = False
 arret = False  
-cmd = ("/stop", "/bye", "/kick", "/ban", "/unban", "/help", "/get-ip") #tuple pour regrouper toutes les commandes
-user_conn = {'Conn' :[], 'Username' :[], 'Address' :[], 'Port' :[], 'SuperUser': []} #dictionnaire des connexions : connnexion, adresse liée, port ou socket id lié, nom d'utilisateur, superuser ou non
+cmd = ("/stop", "/bye", "/kick", "/ban", "/unban", "/help", "/get-ip")
+user_conn = {'Conn' :[], 'Username' :[], 'Address' :[], 'Port' :[], 'SuperUser': []}
 
 help = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br>─────────────────────────────────────────"
-#liste des commandes pour le /help
 helpadmin = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br><br>───────────────── Admin ─────────────────<br>/ban (Banni un utilisateur):\<br>* [username] -p<br>* [ip/socket_id] -a<br><br>/kick (Exclu un utilisateur):<br>* [username] [int] [SECOND, MINUTE, HOUR, YEAR] -p<br>* [ip/socket_id] [int] [SECOND, MINUTE, HOUR, YEAR] -a<br><br>/get-ip (Permet d'obtenir l'adresse ip d'un utilisateur:<br>* [username]<br><br>/unban (Retire une sanction):<br>* [username]<br><br>/stop (Arrête le serveur)<br>─────────────────────────────────────────"
-#liste des commandes pour le /help lorsque admin
 
-#Création d'une classe qui hérite de QThread pour gérer la réception des messages
+# Création d'une classe qui hérite de QThread pour gérer la réception des messages
 class ReceiverThread(QThread):
-    """Cette classe est un Thread qui gère la réception des messages des clients.
-    Il y a un Thread par client connecté.
-
-    Attributes:
-        conn (str): Variable string, connexion unique du client stocké dans le thread de réception
-        server_socket (str): Variable string, socket serveur qui sert à accepter les connexions
-        all_threads (list): Variable list, liste de toutes les connexions actuellement connectées au serveur
-
-    Methods:
-        run(): La méthode run permet de lancer le QThread de réception de message.
-
-        user_profil(user, code_conn): Envoie le profl de l'utilisateur sélectionné par le client
-        
-        stop(all_threads): Arrête le serveur après la commande /stop
-
-        __stop(): Thread qui arrête le serveur en fermant les threads via les variables globales.
-        L'utilisation du Thread permet que la communication via socket fonctionne toujours même après la commande d'arrêt.
-
-        private_message(private, code_conn): Ajoute à la base de données un message privé
-
-        send_private(private, code_conn): Envoie les nouveaux messages privés aux clients concernés
-
-        get_ip(user, code_conn): Donne l'ip correspondant au client suite à la commande get-ip
-
-        update_profil(infor_profil, code_conn): Permet la modification du profil d'un utilisateur
-        
-        notifications(code_conn): Récupère toutes les notifications et les envoient au client concerné
-        
-        demandes(code_conn): Récupère toutes les demandes et les envoient au client concerné
-        
-        create_demande(demande, demande_conn): Vérifie le type de demande pour rediriger vers la bonne fonction
-        
-        demande_admin(demande, code_conn): Vérifie si l'utilisateur demandant les droits admin l'est déjà
-        
-        send_demande_admin(username, code_conn): Ajoute à la bdd la demande admin et l'envoie aux clients administrateurs connectés
-        
-        check_admin_accept(user, admin): Vérifie si l'admin a accepté la demande admin, selon le cas il renvoie vers une fonction accept/refuse
-        
-        demande_salon(demande, code_conn):  Vérifie de quel salon concerne la demande de salon
-        
-        demande_reponse(demande, code_conn): Ajoute à la bdd une nouvelle "demande" de type réponse
-        
-        send_demande_salon(username, salon, code_conn):  Ajoute à la bdd la demande salon et l'envoie aux clients administrateurs connectés
-        
-        check_demande(username, concerne) -> Bool: Vérifie si la demande existe pour ne pas faire de doublons
-        
-        checkroom2(username, salon) -> Bool: Vérifie si l'utilisateur a accès à un salon précis
-        
-        check_salon_accept(user, salon): Vérifie si l'admin a accepté la demande salon, selon le cas il renvoie vers une fonction accept/refuse
-        
-        accept(user, salon): Accept une demande et envoie la réponse positive au client concerné
-        
-        delete_reponse(demandeur, type, receveur, concerne, validate): Supprime la réponse concernant le client demandeur de la BDD.
-        
-        new_salon(username, salon, code_conn): Ajoute à la BDD un nouvel accès à un salon précis pour un client
-        
-        send_new_salon(salon, code_conn): Envoie le code succès qui débloque en temps réel chez le client l'accès à un salon
-        
-        send_new_admin(code_conn): Envoie le code succès qui débloque en temps réel chez le client les droits administrateur
-        
-        add_admin(user): Ajoute les droits administrateur à l'utilisateur concerné dans la BDD
-        
-        new_salon2(username, salon): Ajoute à la BDD un nouvel accès à un salon précis pour un client mais ne renvoie pas le code d'accès à l'utilisateur
-        
-        refuse(user, salon): Envoie au client concerné la réponse négative
-        
-        delete_demande(user, salon): Supprime la demande suite à une réponse 
-        
-        check_admin(user): Vérifie si l'utilisateur est admin
-        
-        check_sanction(user): Vérifie si l'utilisateur a une sanction
-        
-        new_sanction(user, date_fin, sanction_type, code_conn, argument): Crée une sanction de type kick ou ban, en vérifiant l'argument (-a, -p) de la commande. 
-        Renvoie ensuite cette sanction au clients connectés concernés. Gère les codes d'erreur également et les renvoient.
-
-        check_user_exists(user) -> Bool: Vérifie si l'utilisateur existe lors d'une inscription d'un client.
-
-        sanction_type(user, code_conn): Vérifie le type de sanction pour l'envoyer au client qui tente de se log.
-
-        sanction_type2(user) -> Bool: Vérifie le type de sanction sans renvoyer de code.
-
-        unban(user, code_conn): APRÈS UN KICK TEMPORAIRE - Supprime la sanction assigné à un utilisateur dans la BDD, et envoie la code de connexion à l'utilisateur.
-
-        unban_cmd(user, user): APRÈS LA COMMANDE /unban - Supprime la sanction assigné à un utilisateur dans la BDD, et envoie la code de connexion à l'utilisateur.
-
-        create_user(singup, code_conn): Ajoute l'utilisateur à la BDD en vérifiant si le format est respecté. Renvoie un code de succès ou des codes d'erreurs.
-
-        new_private_user(alias, user, code_conn): Lors de la création d'un utilisateur, ajoute celui-ci à la liste des messages privés des clients connectés.
-
-        salon(signup): Donne l'accès au salon "Général" lors de la création d'un utilisateur, droit par défaut.
-
-        send_code(reply, code_conn): Lance le thread d'envoi spécifique aux codes d'erreur et de succès.
-
-        find_user(auth, code_conn): Fonction majeure qui permet d'abord de récupérer les infos correspondants au user.
-        Lance toutes les fonctions nécessaires à l'accès des données du client.
-
-        private(user, code_conn): Sélectionne la liste des messages privés à envoyer au client concerné
-
-        profil(user, code_conn): Envoie les informations du profil du client connecté.
-
-        add_dictionnary(user, conn): Ajoute au dictionnaire la connexion, l'utilisateur, adresse, le port ou id du socket, et enfin si l'utilisateur est super utilisateur ou non.
-
-        users(users_conn): Envoie la liste des utilisateurs existants au client concerné.
-
-        send_users(users, users_conn): Renvoie au thread qui envoie entre autre l'historique des users.
-
-        checkroom(username, code_conn): Lorsqu'un utilisateur se connecte, renvoie des codes correspondant aux droits d'accès aux salons du client.
-
-        insert_data_to_db(recep): Insère les nouveaux messages dans la table message de la BDD.
-
-        send_history(history, history_conn): Renvoie au thread qui envoie entre autre l'historique des messages.
-
-        historique(history_conn): Récupère depuis la BDD l'historique de tous les messages et les envoie 1 par 1 via la fct précédente.
-
-        close(cursor): Ferme la connexion à la BDD.
-
-        quitter(): Ferme toutes les connexions avant de fermer l'instance du programme en cours (la partie graphique).
-
-
-    """
-    #Signal émis lorsque des messages sont reçus
+    # Signal émis lorsque des messages sont reçus
     message_received = pyqtSignal(str)
     def __init__(self, connexion, server_socket, all_threads):
-        """Initialise une nouvelle instance de la classe ReceiverThread.
-
-        Args:
-            connexion: La valeur initiale est obtenu depuis la classe MainWindow.
-            server_socket: La valeur initiale est obtenu depuis la classe AcceptThread.
-            all_threads: La valeur initiale est obtenue de la classe AcceptThread.
-        """
         super().__init__()
         self.conn = connexion
         self.server_socket = server_socket
         self.all_threads = all_threads
 
-    #La méthode run est appelée lorsque le thread démarre
+    # La méthode run est appelée lorsque le thread démarre
     def run(self):
-        """run(): La méthode run permet de lancer le QThread"""
         print("ReceiverThread Up")
         global flag, arret
         try:
@@ -237,7 +107,7 @@ class ReceiverThread(QThread):
                             for conn in self.all_threads:
                                 if conn != self.conn:
                                     continue
-                                else:  #Fermer uniquement la connexion qui a dit "bye"
+                                else:  # Fermer uniquement la connexion qui a dit "bye"
                                     address = str(self.conn)
                                     conn.close()
                                     self.all_threads.remove(conn)
@@ -333,14 +203,14 @@ class ReceiverThread(QThread):
                             if conn != self.conn:
                                 continue
                             else:
-                                #Fermer uniquement la connexion qui a dit "bye"
+                                # Fermer uniquement la connexion qui a dit "bye"
                                 conn.close()
                                 self.all_threads.remove(conn)
 
                     else:
                         print(f'User : {message[2]}\n')
                         self.insert_data_to_db(recep)
-                        #Émission du signal avec le message reçu
+                        # Émission du signal avec le message reçu
                         recep = f'{recep}|{self.conn}'
                         self.message_received.emit(recep)
             
@@ -349,7 +219,7 @@ class ReceiverThread(QThread):
                 if conn != self.conn:
                     continue
                 else:
-                    #Fermer uniquement la connexion qui s'est déconnectée.
+                    # Fermer uniquement la connexion qui s'est déconnectée.
                     conn.close()
                     self.all_threads.remove(conn)
 
@@ -360,9 +230,7 @@ class ReceiverThread(QThread):
         print("ReceiverThread ends\n")
 
     def user_profil(self, user, code_conn):
-        """
-        user_profil(user, code_conn): Envoie le profl de l'utilisateur sélectionné par le client
-        """
+
         profil_query = f"SELECT * FROM user where username = '{user}'"
 
         cursor = conn.cursor()
@@ -383,9 +251,6 @@ class ReceiverThread(QThread):
         self.send_code(reply, code_conn)
     
     def stop(self, all_threads):
-        """
-        stop(all_threads): Arrête le serveur après la commande /stop
-        """
         reply = "Le serveur va s'arrêter dans 10 secondes"
         self.sender_thread = SenderThread(f'Serveur| {reply}', all_threads)
         self.sender_thread.start()
@@ -393,21 +258,7 @@ class ReceiverThread(QThread):
         stop = threading.Thread(target=self.__stop, args=[])
         stop.start()
 
-    def __stop(self):
-        """
-        __stop(): Thread qui arrête le serveur en fermant les threads via les variables globales.
-        L'utilisation du Thread permet que la communication via socket fonctionne toujours même après la commande d'arrêt.
-        """
-        global flag, arret
-        time.sleep(10)
-        flag = True
-        arret = True
-        self.quitter()
-
     def private_message(self, private, code_conn):
-        """
-        private_message(private, code_conn): Ajoute à la base de données un message privé
-        """
         user1 = private[1]
         user2 = private[2]
         contenu = private[3]
@@ -422,9 +273,6 @@ class ReceiverThread(QThread):
         self.send_private(private, code_conn)
 
     def send_private(self, private, code_conn):
-        """
-        send_private(private, code_conn): Envoie les nouveaux messages privés aux clients concernés
-        """
         conn_list= []
         user1 = private[1]
         user2 = private[2]
@@ -465,9 +313,6 @@ class ReceiverThread(QThread):
 
     
     def get_ip(self, user, code_conn):
-        """
-        get_ip(user, code_conn): Donne l'ip correspondant au client suite à la commande get-ip
-        """
         print("get_ip")
         index_conn = user_conn['Username'].index(user)
         address = user_conn['Address'][index_conn]
@@ -480,9 +325,6 @@ class ReceiverThread(QThread):
         self.sender_thread.wait()
 
     def update_profil(self, info_profil, code_conn):
-        """
-        update_profil(infor_profil, code_conn): Permet la modification du profil d'un utilisateur
-        """
         index_conn = user_conn['Conn'].index(code_conn)
         user = user_conn['Username'][index_conn]
 
@@ -506,9 +348,6 @@ class ReceiverThread(QThread):
 
 
     def notifications(self, code_conn):
-        """
-        notifications(code_conn): Récupère toutes les notifications et les envoient au client concerné
-        """
         print("notification")
         conn_list = []
         index_conn = user_conn['Conn'].index(code_conn)
@@ -552,9 +391,6 @@ class ReceiverThread(QThread):
             print("stop")
     
     def demandes(self, code_conn):
-        """
-        demandes(code_conn): Récupère toutes les demandes et les envoient au client concerné
-        """
         print("demandes")
         conn_list = []
         index_conn = user_conn['Conn'].index(code_conn)
@@ -592,9 +428,6 @@ class ReceiverThread(QThread):
             i+=1
 
     def create_demande(self, demande, demande_conn):
-        """
-        create_demande(demande, demande_conn): Vérifie le type de demande pour rediriger vers la bonne fonction
-        """
         print("create demande real")
         print(demande)
         if demande[2] == "SALON":
@@ -609,9 +442,6 @@ class ReceiverThread(QThread):
             self.demande_reponse(demande, demande_conn)
 
     def demande_admin(self, demande, code_conn):
-        """
-        demande_admin(demande, code_conn): Vérifie si l'utilisateur demandant les droits admin l'est déjà
-        """
         if not self.check_admin(demande[1]):
             self.send_demande_admin(demande[1], code_conn)
         else:
@@ -619,9 +449,6 @@ class ReceiverThread(QThread):
             self.send_code(reply, code_conn)
 
     def send_demande_admin(self, username, code_conn):
-        """
-        send_demande_admin(username, code_conn): Ajoute à la bdd la demande admin et l'envoie aux clients administrateurs connectés
-        """
         print("send_demande_admin")
         conn_list = []
         if not self.check_demande(username, "Admin"):
@@ -658,9 +485,6 @@ class ReceiverThread(QThread):
             self.send_code(reply, code_conn)
 
     def check_admin_accept(self, user, admin):
-        """
-        check_admin_accept(user, admin): Vérifie si l'admin a accepté la demande admin, selon le cas il renvoie vers une fonction accept/refuse
-        """
         admin = admin.split("/")
         accept = admin[1]
         conn_list = []
@@ -712,9 +536,6 @@ class ReceiverThread(QThread):
             self.refuse(user, admin)
 
     def demande_salon(self, demande, code_conn):
-        """
-        demande_salon(demande, code_conn):  Vérifie de quel salon concerne la demande de salon
-        """
         if not self.checkroom2(demande[1], demande[3]):
             if demande[3] == "Blabla":
                 self.new_salon(demande[1], demande[3], code_conn)
@@ -725,9 +546,6 @@ class ReceiverThread(QThread):
             self.send_code(reply, code_conn)
 
     def demande_reponse(self, demande, code_conn):
-        """
-        demande_reponse(demande, code_conn): Ajoute à la bdd une nouvelle "demande" de type réponse
-        """
         print("demande_reponse")
         reponse = demande[5].split("/")
         if reponse[1] == 'Salon':
@@ -743,9 +561,6 @@ class ReceiverThread(QThread):
 
 
     def send_demande_salon(self, username, salon, code_conn):
-        """
-        send_demande_salon(username, salon, code_conn):  Ajoute à la bdd la demande salon et l'envoie aux clients administrateurs connectés
-        """
         print("send_demande_salon")
         conn_list = []
         if not self.check_demande(username, salon):
@@ -779,9 +594,6 @@ class ReceiverThread(QThread):
 
 
     def check_demande(self, username, concerne):
-        """
-        check_demande(username, concerne) -> Bool: Vérifie si la demande existe pour ne pas faire de doublons
-        """
         try:
             print(concerne)
             print(username)
@@ -799,9 +611,6 @@ class ReceiverThread(QThread):
             
         
     def checkroom2(self, username, salon):
-        """
-        checkroom2(username, salon) -> Bool: Vérifie si l'utilisateur a accès à un salon précis
-        """
         try:
             msg_query = f"SELECT user FROM acces_salon WHERE nom = '{salon}' AND user = (SELECT id_user FROM user WHERE username = '{username}')"
             cursor = conn.cursor()
@@ -816,9 +625,6 @@ class ReceiverThread(QThread):
             return False
         
     def check_salon_accept(self, user, salon):
-        """
-        check_salon_accept(user, salon): Vérifie si l'admin a accepté la demande salon, selon le cas il renvoie vers une fonction accept/refuse
-        """
         salon = salon.split("/")
         salon_nom = salon[0]
         accept = salon[1]
@@ -844,9 +650,6 @@ class ReceiverThread(QThread):
             self.refuse(user, salon)
 
     def accept(self, user, salon):
-        """
-        accept(user, salon): Accept une demande et envoie la réponse positive au client concerné
-        """
         print("accept")
         
         self.delete_demande(user, salon)
@@ -875,9 +678,6 @@ class ReceiverThread(QThread):
         print('accepted')
 
     def delete_reponse(self, demandeur, type, receveur, concerne, validate):
-        """
-        delete_reponse(demandeur, type, receveur, concerne, validate): Supprime la réponse concernant le client demandeur de la BDD.
-        """
         print("delete_reponse")
         create_user_query = f"DELETE FROM demande WHERE type = '{type}' AND receveur = '{receveur}' AND concerne = '{concerne}' AND VALIDATE = '{validate}' AND reponse = '1' LIMIT 1"
         cursor = conn.cursor()
@@ -887,9 +687,6 @@ class ReceiverThread(QThread):
         self.close(cursor)
 
     def new_salon(self, username, salon, code_conn):
-        """
-        new_salon(username, salon, code_conn): Ajoute à la BDD un nouvel accès à un salon précis pour un client
-        """
         create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('{salon}', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
         cursor = conn.cursor()
         cursor.execute(create_user_query)
@@ -900,9 +697,6 @@ class ReceiverThread(QThread):
         self.close(cursor)
 
     def send_new_salon(self, salon, code_conn):
-        """
-        send_new_salon(salon, code_conn): Envoie le code succès qui débloque en temps réel chez le client l'accès à un salon
-        """
         print("send_new_salon")
         try:
             reply = f"CODE|27/{salon}|ACCES SALON SPÉCIFIQUE"
@@ -912,9 +706,6 @@ class ReceiverThread(QThread):
             print(e)
 
     def send_new_admin(self, code_conn):
-        """
-        send_new_admin(code_conn): Envoie le code succès qui débloque en temps réel chez le client les droits administrateur
-        """
         print("send_new_admin")
         try:
             reply = f"CODE|31|NOUVEL ADMIN"
@@ -924,9 +715,6 @@ class ReceiverThread(QThread):
             print(e)
 
     def add_admin(self, user):
-        """
-        add_admin(user): Ajoute les droits administrateur à l'utilisateur concerné dans la BDD
-        """
         print("add_admin")
         admin_query = f"UPDATE user SET is_admin = 1 WHERE username = '{user}'"
         cursor = conn.cursor()
@@ -937,9 +725,6 @@ class ReceiverThread(QThread):
 
 
     def new_salon2(self, username, salon):
-        """
-        new_salon2(username, salon): Ajoute à la BDD un nouvel accès à un salon précis pour un client mais ne renvoie pas le code d'accès à l'utilisateur
-        """
         print("new salon 2")
         create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('{salon[0]}', NOW(), (SELECT id_user FROM user WHERE username = '{username}'))"
         cursor = conn.cursor()
@@ -949,9 +734,6 @@ class ReceiverThread(QThread):
         self.close(cursor)
 
     def refuse(self, user, salon):
-        """
-        refuse(user, salon): Envoie au client concerné la réponse négative
-        """
         print("refuse")
         
         self.delete_demande(user, salon)
@@ -980,9 +762,6 @@ class ReceiverThread(QThread):
         print('fact')
 
     def delete_demande(self, user, salon):
-        """
-        delete_demande(user, salon): Supprime la demande suite à une réponse 
-        """
         print("delete_demande")
         create_user_query = f"DELETE FROM demande WHERE demandeur = '{user}' AND concerne = '{salon[0]}'"
         cursor = conn.cursor()
@@ -993,9 +772,6 @@ class ReceiverThread(QThread):
 
     
     def check_admin(self, user):
-        """
-        check_admin(user): Vérifie si l'utilisateur est admin
-        """
         msg_query = f"SELECT is_admin FROM user WHERE username = '{user}'"
         cursor = conn.cursor()
         cursor.execute(msg_query)
@@ -1009,9 +785,6 @@ class ReceiverThread(QThread):
             return False
 
     def check_sanction(self, user):
-        """
-        check_sanction(user): Vérifie si l'utilisateur a une sanction
-        """
         try:
             msg_query = f"SELECT sanction FROM user WHERE username = '{user}'"
             cursor = conn.cursor()
@@ -1032,10 +805,6 @@ class ReceiverThread(QThread):
     
     
     def new_sanction(self, user, date_fin, sanction_type, code_conn, argument):
-        """
-        new_sanction(user, date_fin, sanction_type, code_conn, argument): Crée une sanction de type kick ou ban, en vérifiant l'argument (-a, -p) de la commande. 
-        Renvoie ensuite cette sanction au clients connectés concernés. Gère les codes d'erreur également et les renvoient.
-        """
         print("new sanction")
         conn_list = []
         if argument == "-a":
@@ -1181,9 +950,6 @@ class ReceiverThread(QThread):
 
 
     def check_user_exists(self, user):
-        """
-        check_user_exists(user) -> Bool: Vérifie si l'utilisateur existe lors d'une inscription d'un client.
-        """
         try:
             user_query = f"SELECT * from user where username = '{user}'"
             cursor = conn.cursor()
@@ -1197,9 +963,6 @@ class ReceiverThread(QThread):
             return False
 
     def sanction_type(self, user, code_conn):
-        """
-        sanction_type(user, code_conn): Vérifie le type de sanction pour l'envoyer au client qui tente de se log.
-        """
         reply = "CODE"
         msg_query = f"SELECT type, date_fin FROM sanction WHERE user = '{user}'"
         cursor = conn.cursor()
@@ -1223,9 +986,6 @@ class ReceiverThread(QThread):
             print("sanction error")
 
     def sanction_type2(self, user):
-        """
-        sanction_type2(user) -> Bool: Vérifie le type de sanction sans renvoyer de code.
-        """
         reply = "CODE"
         msg_query = f"SELECT type, date_fin FROM sanction WHERE user = '{user}'"
         cursor = conn.cursor()
@@ -1244,9 +1004,6 @@ class ReceiverThread(QThread):
             print("sanction error")
         
     def unban(self, user, code_conn):
-        """
-        unban(user, code_conn): APRÈS UN KICK TEMPORAIRE - Supprime la sanction assigné à un utilisateur dans la BDD, et envoie la code de connexion à l'utilisateur.
-        """
         print('unban')
         try:
             unban_query = f"DELETE FROM sanction where user = '{user}'"
@@ -1277,9 +1034,6 @@ class ReceiverThread(QThread):
         self.checkroom(user, code_conn)
 
     def unban_cmd(self, user):
-        """
-        unban_cmd(user, user): APRÈS LA COMMANDE /unban - Supprime la sanction assigné à un utilisateur dans la BDD, et envoie la code de connexion à l'utilisateur.
-        """
         print("unban cmd")
         try:
             unban_query = f"DELETE FROM sanction where user = '{user}'"
@@ -1296,9 +1050,6 @@ class ReceiverThread(QThread):
         conn.commit()
 
     def create_user(self, signup, code_conn):
-        """
-        create_user(singup, code_conn): Ajoute l'utilisateur à la BDD en vérifiant si le format est respecté. Renvoie un code de succès ou des codes d'erreurs.
-        """
         print(signup)
         reply = 'CODE'
         email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
@@ -1328,7 +1079,7 @@ class ReceiverThread(QThread):
                     self.new_private_user(signup[1], signup[0], code_conn)
                     
                 except mysql.connector.Error as err:
-                    if err.errno == 1062:  #Numéro d'erreur MySQL pour la violation de contrainte d'unicité
+                    if err.errno == 1062:  # Numéro d'erreur MySQL pour la violation de contrainte d'unicité
                         reply = f"{reply}|8|USERNAME NON UNIQUE"
                         self.send_code(reply, code_conn)
                     elif err.errno == 3819:
@@ -1340,9 +1091,6 @@ class ReceiverThread(QThread):
             print(e)
     
     def new_private_user(self, alias, user, code_conn):
-        """
-        new_private_user(alias, user, code_conn): Lors de la création d'un utilisateur, ajoute celui-ci à la liste des messages privés des clients connectés.
-        """
         reply = f"NEW_USER|Général|{alias} @{user}"
         conn_list = self.all_threads
         conn_list.remove(code_conn)
@@ -1351,9 +1099,6 @@ class ReceiverThread(QThread):
         self.sender_thread.wait()
 
     def salon(self, signup):
-        """
-        salon(signup): Donne l'accès au salon "Général" lors de la création d'un utilisateur, droit par défaut.
-        """
         create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Général', NOW(), (SELECT id_user FROM user WHERE username = '{signup[0]}'))"
         cursor = conn.cursor()
         cursor.execute(create_user_query)
@@ -1362,19 +1107,12 @@ class ReceiverThread(QThread):
         self.close(cursor)
 
     def send_code(self, reply, code_conn):
-        """
-        send_code(reply, code_conn): Lance le thread d'envoi spécifique aux codes d'erreur et de succès.
-        """
         print(reply)
         self.sender_thread = CodeThread(f'{reply}', code_conn)
         self.sender_thread.start()
         self.sender_thread.wait()
 
     def find_user(self, auth, code_conn):
-        """
-        find_user(auth, code_conn): Fonction majeure qui permet d'abord de récupérer les infos correspondants au user.
-        Lance toutes les fonctions nécessaires à l'accès des données du client.
-        """
         reply = "CODE"
         print(auth)
 
@@ -1424,9 +1162,6 @@ class ReceiverThread(QThread):
             self.send_code(reply, code_conn)
 
     def private(self, user, code_conn):
-        """
-        private(user, code_conn): Sélectionne la liste des messages privés à envoyer au client concerné
-        """
         private_query = f"""
             SELECT p.*, u1.username AS user1_username, u2.username AS user2_username
             FROM private p
@@ -1446,9 +1181,6 @@ class ReceiverThread(QThread):
             self.send_history(reply, code_conn)
 
     def profil(self, user, code_conn):
-        """
-        profil(user, code_conn): Envoie les informations du profil du client connecté.
-        """
         profil_query = f"SELECT * FROM user where username = '{user}'"
 
         cursor = conn.cursor()
@@ -1470,9 +1202,6 @@ class ReceiverThread(QThread):
 
 
     def add_dictionnary(self, user, conn):
-        """
-        add_dictionnary(user, conn): Ajoute au dictionnaire la connexion, l'utilisateur, adresse, le port ou id du socket, et enfin si l'utilisateur est super utilisateur ou non.
-        """
         print("add_dictionnary")
         try:
             match = re.search(r"raddr=\('([^']+)', (\d+)\)", str(conn))
@@ -1515,9 +1244,6 @@ class ReceiverThread(QThread):
 
 
     def users(self, users_conn):
-        """
-        users(users_conn): Envoie la liste des utilisateurs existants au client concerné.
-        """
         nb_users_query = "SELECT MAX(id_user) FROM user"
 
         cursor = conn.cursor()
@@ -1574,17 +1300,11 @@ class ReceiverThread(QThread):
             except:
                 continue
     def send_users(self, users, users_conn):
-        """
-        send_users(users, users_conn): Renvoie au thread qui envoie entre autre l'historique des users.
-        """
         self.users_thread = HistoryThread(users, users_conn)
         self.users_thread.start()
         self.users_thread.wait()
 
     def checkroom(self, username, code_conn):
-        """
-        checkroom(username, code_conn): Lorsqu'un utilisateur se connecte, renvoie des codes correspondant aux droits d'accès aux salons du client.
-        """
         print('checkroom')
         msg_query = f"SELECT (SELECT user FROM acces_salon WHERE nom = 'Général' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_general, (SELECT user FROM acces_salon WHERE nom = 'Blabla' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_blabla, (SELECT user FROM acces_salon WHERE nom = 'Comptabilité' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_comptabilite, (SELECT user FROM acces_salon WHERE nom = 'Informatique' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_informatique, (SELECT user FROM acces_salon WHERE nom = 'Marketing' AND user = (SELECT id_user FROM user WHERE username = '{username}')) AS user_marketing"
         cursor = conn.cursor()
@@ -1607,9 +1327,6 @@ class ReceiverThread(QThread):
 
 
     def insert_data_to_db(self, recep):
-        """
-        insert_data_to_db(recep): Insère les nouveaux messages dans la table message de la BDD.
-        """
         recep = recep.split("|")
         loggers = recep[1].split("/")
 
@@ -1639,17 +1356,11 @@ class ReceiverThread(QThread):
             print(f"Erreur d'insertion : {error}")
 
     def send_history(self, history, history_conn):
-        """
-        send_history(history, history_conn): Renvoie au thread qui envoie entre autre l'historique des messages.
-        """
         self.history_thread = HistoryThread(history, history_conn)
         self.history_thread.start()
         self.history_thread.wait()
 
     def historique(self, history_conn):
-        """
-        historique(history_conn): Récupère depuis la BDD l'historique de tous les messages et les envoie 1 par 1 via la fct précédente.
-        """
         nb_msg_query = "SELECT MAX(id_message) FROM message"
 
         cursor = conn.cursor()
@@ -1682,16 +1393,16 @@ class ReceiverThread(QThread):
             self.close(cursor)
 
     def close(self, cursor):
-        """
-        close(cursor): Ferme la connexion à la BDD.
-        """
         cursor.close()
-
+    
+    def __stop(self):
+        global flag, arret
+        time.sleep(10)
+        flag = True
+        arret = True
+        self.quitter()
         
     def quitter(self):
-        """
-        quitter(): Ferme toutes les connexions avant de fermer l'instance du programme en cours (la partie graphique).
-        """
         for conn in self.all_threads:
             conn.close()
         self.server_socket.close()
@@ -1699,33 +1410,12 @@ class ReceiverThread(QThread):
 
 
 class SenderThread(QThread):
-    """Cette classe permet d'envoyer de manière "broadcast" des messages aux clients connectés
-
-    Attributes:
-        reply (str): Variable string, message qui va être envoyé au client.
-        all_threads (list): Variable list, toutes les connexions en cours.
-
-    Methods:
-        run(): La méthode run permet de lancer le QThread d'envoi de messages. Cherche également l'alias correspondant au username pour l'envoyer.
-        close(cursor): Ferme la connexion à la BDD.
-
-    """
     def __init__(self, reply, all_threads):
-        """Initialise une nouvelle instance de la classe SenderThread.
-
-        Args:
-            reply: La valeur initiale est obtenue depuis la classe ReceiverThread.
-            all_threads: La valeur initiale est obtenue de la classe AcceptThread, mais ici obtenue depuis ReceiverThread.
-        """
         super().__init__()
         self.reply = reply
         self.all_threads = all_threads
 
-    #La méthode run est appelée lorsque le thread démarre
     def run(self):
-        """
-        run(): La méthode run permet de lancer le QThread d'envoi de messages. Cherche également l'alias correspondant au username pour l'envoyer.
-        """
         print("SenderThread Up")
         print(self.reply)
         date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -1765,35 +1455,18 @@ class SenderThread(QThread):
         print("SenderThread ends")
 
     def close(self, cursor):
-        """
-        close(cursor): Ferme la connexion à la BDD.
-        """
         cursor.close()
 
+    def quitter(self):
+        QCoreApplication.instance().quit()
+
 class CodeThread(QThread):
-    """Cette classe permet d'envoyer de manière "unicast" des messages au client concerné.
-
-    Attributes:
-        code (str): Message qui va être envoyé au client contenant le code d'erreur ou d'accès.
-        code_conn (str): Connexion du client concerné.
-
-    Method:
-        run(): La méthode run permet de lancer le QThread d'envoi de messages.
-    """
     def __init__(self, code, code_conn):
-        """Initialise une nouvelle instance de la classe CodeThread.
-
-        Args:
-            code: La valeur initiale est obtenue depuis la classe ReceiverThread.
-            code_conn: La valeur initiale est obtenue de la classe AcceptThread, mais ici obtenue depuis ReceiverThread.
-        """
         super().__init__()
         self.code = code
         self.code_conn = code_conn
 
-    #La méthode run est appelée lorsque le thread démarre
     def run(self):
-        """"run(): La méthode run permet de lancer le QThread d'envoi de messages."""
         #print("CodeThread Up")
         try:
             try:
@@ -1805,33 +1478,16 @@ class CodeThread(QThread):
                 print(error)
         except Exception as err:
             print(err)
+    def quitter(self):
+        QCoreApplication.instance().quit()
 
 class HistoryThread(QThread):
-    """Cette classe permet d'envoyer de manière "unicast" des messages au client concerné.
-
-    Attributes:
-        history (str): Message qui va être envoyé au client contenant l'historique des messages, utilisateurs, ou message serveur.'
-        history_conn (str): Connexion du client concerné.
-
-    Method:
-        run(): La méthode run permet de lancer le QThread d'envoi de messages.
-    """
     def __init__(self, history, history_conn):
-        """Initialise une nouvelle instance de la classe CodeThread.
-
-        Args:
-            history: La valeur initiale est obtenue depuis la classe ReceiverThread.
-            history_conn: La valeur initiale est obtenue depuis la classe ReceiverThread.
-        """
         super().__init__()
         self.history = history
         self.history_conn = history_conn
 
-    #La méthode run est appelée lorsque le thread démarre
     def run(self):
-        """
-        run(): La méthode run permet de lancer le QThread d'envoi de messages.
-        """
         #print("HistoryThread Up")
         date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
         try :
@@ -1858,49 +1514,14 @@ class HistoryThread(QThread):
         #print("HistoryThread ends")
 
 class AcceptThread(QThread):
-    """Cette classe permet d'envoyer de manière "unicast" des messages au client concerné.
-
-    Attributes:
-        server_socket (str): Variable string correspondant à l'ouverture du socket serveur.
-        log (str): Élément string QTextEdit qui permet de stocker les logs du serveurs.
-        send (str): Élément string QLineEdit qui permet de rentrer les messages à envoyer aux clients;
-        connect (str): Élément string QPushButton qui permet d'envoyer des messages aux clients depuis l'interface serveur.
-
-    Methods:
-        run(): La méthode run permet de lancer le QThread d'acceptation de nouveaux clients, qui va ensuite ouvrir les QThread de réception.
-        
-        update_reply(message): Met à jour grâce un signal présent dans le thread de réception le QTextEdit log du serveur.
-
-        listen(): Permet de définir le temps d'écoute du socket du serveur vis à vis des connexions client.
-
-        sender(): Appel el thread SenderThread pour envoyer un message Serveur aux clients.
-
-        send_everyone(message): Renvoie les messages envoyé par un client à tous les autres clients via un pyQtSignal connecté à cette fonction.
-        Vérifie également que le message n'est pas une commande pour ne pas l'enregistrer.
-
-        quitter(): Permet de quitter l'instance du programme
-    """
     def __init__(self, server_socket, log, send, connect):
-        """Initialise une nouvelle instance de la classe AcceptThread.
-
-        Args:
-            server_socket: La valeur initiale est nulle.
-            log: La valeur est un QTextEdit de la classe MainWindow.
-            send: La valeur est un QLineEdit de la classe MainWindow.
-            connect: La valeur est une QPushButton de la classe MainWindow.
-
-        """
         super().__init__()
         self.server_socket = server_socket
         self.log = log
         self.send = send
         self.connect = connect
     
-    #La méthode run est appelée lorsque le thread démarre
     def run(self):
-        """
-        run(): La méthode run permet de lancer le QThread d'acceptation de nouveaux clients, qui va ensuite ouvrir les QThread de réception.
-        """
         print("AcceptThread Up")
         global flag, arret
         self.all_threads = []
@@ -1938,11 +1559,8 @@ class AcceptThread(QThread):
         
         print("AcceptThread ends")
     
-    #Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
+    # Méthode appelée pour mettre à jour l'interface utilisateur avec le message reçu
     def update_reply(self, message):
-        """
-        update_reply(message): Met à jour grâce un signal présent dans le thread de réception le QTextEdit log du serveur.
-        """
         print(message)
         message = message.split("|")
         user = message[1].split("/")
@@ -1962,15 +1580,9 @@ class AcceptThread(QThread):
         self.log.append(f'({message[0]} - {conn_info}) {user[0]} ~~ {message[2]}') 
     
     def listen(self):
-        """
-        listen(): Permet de définir le temps d'écoute du socket du serveur vis à vis des connexions client.
-        """
         self.server_socket.listen(100)
     
     def sender(self):
-        """
-        sender(): Appel el thread SenderThread pour envoyer un message Serveur aux clients.
-        """
         reply = self.send.text()
         self.send.setText("")
         self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
@@ -1978,16 +1590,15 @@ class AcceptThread(QThread):
         self.sender_thread.wait()
 
     def send_everyone(self, message):
-        """
-        send_everyone(message): Renvoie les messages envoyé par un client à tous les autres clients via un pyQtSignal connecté à cette fonction.
-        Vérifie également que le message n'est pas une commande pour ne pas l'enregistrer.
-        """
+        print(message)
         print(f"Send everyone : {message}")
         commande = message.split("|")
         commande = commande[2]
         if commande in cmd:
+            print(12)
             return
         else:
+            print(13)
             print(cmd)
             self.sender_thread = SenderThread(message, self.all_threads)
             self.sender_thread.start()
@@ -1996,27 +1607,19 @@ class AcceptThread(QThread):
     def quitter(self):
         QCoreApplication.instance().quit()
 
+# Classe de la fenêtre principale
 class Window(QMainWindow):
-    """Cette classe permet d'afficher la fenêtre principale du serveur.
-
-    Methods:
-        setupUi(): Affiche les éléments graphiques de la fenêtre.
-        main_thread(): Permet de lancer le QThread AcceptThread ouvrant le socket et acceptant les connexions.
-        button_clicked(s): Ouvre une fenêtre dialog qui donne des informations sur le serveur.
-        quitter(): Méthode appelée lorsqu'on clique sur le bouton Quitter, ferme l'instance du programme.
-    """
-    global w #classe Login
+    global w
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi()
 
     def setupUi(self):
-        """setupUi(): Affiche les éléments graphiques de la fenêtre."""
         self.setWindowTitle("Serveur")
         self.resize(500, 500)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
-        #Création et connexion des widgets
+        # Création et connexion des widgets
         self.label = QLabel("Logs")
         self.label2 = QLabel("Message Serveur")
         self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
@@ -2033,7 +1636,7 @@ class Window(QMainWindow):
         self.dialog.clicked.connect(self.button_clicked)
         self.btn_quit.clicked.connect(self.quitter)
 
-        #Configuration du layout
+        # Configuration du layout
         layout = QGridLayout()
         layout.addWidget(self.label, 0, 0, 1, 2)
         layout.addWidget(self.label2, 2, 0, 1, 2)
@@ -2048,12 +1651,9 @@ class Window(QMainWindow):
         self.label.setText(f"Log du serveur")
         self.text_edit.setText(f"")
 
-        w.start_server.connect(self.main_thread) #pyQtSignal permettant de lancer le QThread AcceptThread lors du log in serveur
+        w.start_server.connect(self.main_thread)
 
     def main_thread(self):
-        """
-        main_thread(): Permet de lancer le QThread AcceptThread ouvrant le socket et acceptant les connexions.
-        """
         print("Démarrage du serveur")
         log = self.text_edit
         send = self.line_edit2
@@ -2064,16 +1664,14 @@ class Window(QMainWindow):
 
 
     def button_clicked(self, s):
-        """
-        button_clicked(s): Ouvre une fenêtre dialog qui donne des informations sur le serveur.
-        """
         dlg = QMessageBox(self)
         dlg.setWindowTitle("Aide")
-        dlg.setText("Centrale du Serveur. Vous pouvez envoyez des messages à tous les clients, créer un super utilisateur, obtenir les messages des clients avec leur IP.")
+        dlg.setText("Centrale du Serveur.")
         dlg.setStandardButtons(QMessageBox.Ok)
         dlg.setIcon(QMessageBox.Question)
         dlg.exec()
 
+    # Méthode appelée lorsqu'on clique sur le bouton Quitter
     def quitter(self):
         global flag, arret
         flag = True
@@ -2081,18 +1679,8 @@ class Window(QMainWindow):
         QCoreApplication.instance().quit()
 
 class Login(QMainWindow):
-    """Cette classe permet d'accèder au serveur et de le lancer
-
-    Methods:
-        setupUi(): Affiche les éléments graphiques de la fenêtre.
-        auth(): Permet si la connexion est juste, d'accéder au serveur.
-        errorbox(code): Fenêtre d'erreur si une condition de auth() n'est pas respectée.
-        first_time(): Émet un signal qui ouvre la fenêtre d'inscription.
-
-
-    """
-    signup_window_signal = pyqtSignal() #pyQtSignal permettant d'afficher la fenêtre d'inscription
-    start_server = pyqtSignal() #permet de lancer le serveur lorsque reçu
+    signup_window_signal = pyqtSignal()
+    start_server = pyqtSignal()
     def __init__(self, parent=None):
         super(Login, self).__init__(parent)
 
@@ -2172,17 +1760,6 @@ class Login(QMainWindow):
         self.signup_window_signal.emit()
 
 class Sign_up(QMainWindow):
-    """Cette classe permet d'afficher la fenêtre d'inscription d'un super utilisateur.
-
-    Methods:
-        setupUi(): Affiche les éléments graphiques de la fenêtre.
-        sign_up(): Permet si les conditions sont respectées, d'accéder aux fonctions d'inscription dans la BDD.
-        errorbox(self, code): Fenêtre d'erreur de type dialog.
-        successBox(self, code): Fenêtre qui affiche le succès de type dialog.
-        quitter(): Permet de quitter l'instance du programme.
-        create_super_user(self, username, alias, mail, mdp): Ajoute à la BDD le nouveau super utilisateur ainsi que ses droits d'accès aux salons dans la BDD.
-        
-    """
     def __init__(self, parent=None):
         super(Sign_up, self).__init__(parent)
 
@@ -2293,7 +1870,7 @@ class Sign_up(QMainWindow):
             self.close()
 
         except mysql.connector.Error as err:
-            if err.errno == 1062:  #Numéro d'erreur MySQL pour la violation de contrainte d'unicité
+            if err.errno == 1062:  # Numéro d'erreur MySQL pour la violation de contrainte d'unicité
                 self.errorbox("D")
             elif err.errno == 3819:
                 self.errorbox("E")
@@ -2364,21 +1941,20 @@ class Sign_up(QMainWindow):
         cursor.close()
 
 def show_signup_window():
-    #Cette méthode permet d'afficher la fenêtre signup grâce à un signal.
     global signup_window
-    signup_window = Sign_up()  #instance la classe Sign_up(), fenêtre d'inscription
+    signup_window = Sign_up()
     signup_window.show()
 
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
-        w = Login() #instance la classe Login(), fenêtre de connexion
+        w = Login()
         w.show()
-        window = Window() #instance la classe Window(), fenêtre principale du serveur
+        window = Window()
 
-        w.signup_window_signal.connect(show_signup_window) #affiche la fenêtre d'inscription via le signal émit
+        w.signup_window_signal.connect(show_signup_window)
 
-        sys.exit(app.exec()) #Éxécute l'application
+        sys.exit(app.exec())
 
     finally :
         print("Arrêt du serveur")

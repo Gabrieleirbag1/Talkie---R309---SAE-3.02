@@ -27,3 +27,51 @@ ajouter_private(all_private, "Alice", ["PRIVATE", "Alice", "Charlie", "2023-01-0
 # Afficher le dictionnaire après l'ajout du deuxième élément (remplacement)
 print("zizi")
 print(all_private)
+
+
+class MyClass:
+    """Cette classe représente un exemple de classe.
+
+    Attributes:
+        attribute1 (int): Une variable d'entier pour stocker une valeur.
+        attribute2 (str): Une variable de chaîne pour stocker du texte.
+
+    Methods:
+        method1(): Une méthode qui fait quelque chose.
+        method2(param): Une méthode avec un paramètre.
+
+    """
+
+    def __init__(self, value):
+        """Initialise une nouvelle instance de la classe.
+
+        Args:
+            value: La valeur initiale pour attribute1.
+
+        """
+        self.attribute1 = value
+        self.attribute2 = "Initial Value"
+
+    def method1(self):
+        """Une méthode qui fait quelque chose."""
+        print("Méthode 1 exécutée.")
+
+    def method2(self, param):
+        """Une méthode avec un paramètre.
+
+        Args:
+            param: Un paramètre pour la méthode.
+
+        Returns:
+            str: Une chaîne de caractères résultante.
+
+        """
+        result = f"Le paramètre est {param}."
+        return result
+
+# Exemple d'utilisation de la classe et de la documentation
+instance = MyClass(42)
+instance.method1()
+output = instance.method2("Hello")
+print(output)
+
