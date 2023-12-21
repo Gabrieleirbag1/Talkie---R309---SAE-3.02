@@ -1867,6 +1867,7 @@ class MessagerieWindow(QWidget):
         print(msg)
         msg_private = msg.split("|")
         date = datetime.datetime.now().strftime("%H:%M")
+        mois = datetime.datetime.now().strftime("%d/%m/%Y")
         user1 = msg_private[0]
         user2 = msg_private[1]
         contenu = msg_private[2]
@@ -1875,14 +1876,41 @@ class MessagerieWindow(QWidget):
         user = user1 if msg_private[3] == "user1" else user2
         try:
             index_user = all_private['User'].index(user)
+            if mois != all_private["Mois"][index_user]:
+                all_private["Private"][index_user] = f'{all_private["Private"][index_user]}<br>───────────────────────{mois}──────────────────────'
+                all_private["Mois"][index_user] = mois
+                selected_item = self.button_list.currentItem()
+                if selected_item:
+                    selected_widget = self.button_list.itemWidget(selected_item)
+                    chat = selected_widget.button2.text()
+                    if user == chat:
+                        self.text_edit.append(f"───────────────────────{mois}──────────────────────")
+
             all_private["Private"][index_user] = f'{all_private["Private"][index_user]}<br>{private}'
             print("added to dico2")
             print(all_private)
         
         except ValueError:
-            all_private["Private"].append(private)
+            all_private["Private"].append(f"───────────────────────{mois}──────────────────────<br>{private}")
             all_private["User"].append(user)
+            all_private["Mois"].append(mois)
+            selected_item = self.button_list.currentItem()
+            if selected_item:
+                selected_widget = self.button_list.itemWidget(selected_item)
+                chat = selected_widget.button2.text()
+                if user == chat:
+                    self.text_edit.append(f"───────────────────────{mois}──────────────────────")
         
+        except IndexError:
+            all_private["Private"].append(f"───────────────────────{mois}──────────────────────<br>{private}")
+            all_private["User"].append(user)
+            all_private["Mois"].append(mois)
+            selected_item = self.button_list.currentItem()
+            if selected_item:
+                selected_widget = self.button_list.itemWidget(selected_item)
+                chat = selected_widget.button2.text()
+                if user == chat:
+                    self.text_edit.append(f"───────────────────────{mois}──────────────────────")
         #print(all_private)
 
         try:
