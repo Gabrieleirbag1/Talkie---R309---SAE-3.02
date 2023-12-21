@@ -90,6 +90,14 @@ class ReceiverThread(QThread):
                 elif message[0] == "PROFIL":
                     self.update_profil(message, self.conn)
 
+                elif message[0] == "USER_PROFIL":
+                    print(message)
+                    self.user_profil(message[1], self.conn)
+
+                elif message[0] == "PRIVATE":
+                    print("PRIVATE MESSAGE")
+                    self.private_message(message, self.conn)
+
                 elif message[2] == "" or message[2] == " ": #pas de message vide
                     pass
 
@@ -119,12 +127,7 @@ class ReceiverThread(QThread):
                         elif message[2] == "/stop":
                             if self.check_admin(auth[0]):
                                 print("Arrêt du serveur")
-                                reply = "Le serveur va s'arrêter dans 10 secondes"
-                                self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
-                                self.sender_thread.start()
-                                self.sender_thread.wait()
-                                stop = threading.Thread(target=self.__stop, args=[])
-                                stop.start()
+                                self.stop(self.all_threads)
                             else:
                                 print("Pas la permission")
                                 recep = "CODE"
@@ -220,8 +223,94 @@ class ReceiverThread(QThread):
                     conn.close()
                     self.all_threads.remove(conn)
 
+        except ConnectionResetError:
+            print("Une connexion réinitalisée a provoquée l'arrêt d'un client.")
+
 
         print("ReceiverThread ends\n")
+
+    def user_profil(self, user, code_conn):
+
+        profil_query = f"SELECT * FROM user where username = '{user}'"
+
+        cursor = conn.cursor()
+        cursor.execute(profil_query)
+        
+        result = cursor.fetchone()
+        alias = result[5]
+        is_admin = result[6]
+        mail = result[3]
+        description = result[8]
+        date = result[4]
+        date = date.strftime("%d/%m/%Y %H:%M")
+        photo = result[9]
+
+        self.close(cursor)
+
+        reply = f"USER_PROFIL|{user}|{alias}|{mail}|{is_admin}|{description}|{date}|{photo}"
+        self.send_code(reply, code_conn)
+    
+    def stop(self, all_threads):
+        reply = "Le serveur va s'arrêter dans 10 secondes"
+        self.sender_thread = SenderThread(f'Serveur| {reply}', all_threads)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+        stop = threading.Thread(target=self.__stop, args=[])
+        stop.start()
+
+    def private_message(self, private, code_conn):
+        user1 = private[1]
+        user2 = private[2]
+        contenu = private[3]
+
+        sanction_query = "INSERT INTO private (user1, user2, contenu, date) VALUES ((SELECT id_user FROM user WHERE username = %s), (SELECT id_user FROM user WHERE username = %s), %s, NOW())"
+        cursor = conn.cursor()
+        data = (user1, user2, contenu)
+        cursor.execute(sanction_query, data)
+        conn.commit()
+        self.close(cursor)
+
+        self.send_private(private, code_conn)
+
+    def send_private(self, private, code_conn):
+        conn_list= []
+        user1 = private[1]
+        user2 = private[2]
+        contenu = private[3]
+        reply = f"MSG_PRIVATE|{user1}|{user2}|{contenu}|user1"
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == user2:
+                    conn_list.append(user_conn['Conn'][i])
+            try:
+                for private_conn in conn_list:
+                    self.sender_thread = HistoryThread(reply, private_conn)
+                    self.sender_thread.start()
+                    self.sender_thread.wait()
+            except Exception as e:
+                print(e)
+        except Exception as e:
+            print(e)
+
+        try :
+            reply = f"MSG_PRIVATE|{user1}|{user2}|{contenu}|user2"
+            print(reply)
+            print(user1)
+            for i, username in enumerate(user_conn['Username']):
+                if username == user1:
+                    conn_list.append(user_conn['Conn'][i])
+            try:
+                for private_conn in conn_list:
+                    if private_conn != code_conn:
+                        self.sender_thread = HistoryThread(reply, private_conn)
+                        self.sender_thread.start()
+                        self.sender_thread.wait()
+            except Exception as e:
+                print(e)
+        except Exception as e:
+            print(e)
+
+
     
     def get_ip(self, user, code_conn):
         print("get_ip")
@@ -986,6 +1075,8 @@ class ReceiverThread(QThread):
 
                     reply = f"{reply}|4|SIGN UP SUCCESS"
                     self.send_code(reply, code_conn)
+
+                    self.new_private_user(signup[1], signup[0], code_conn)
                     
                 except mysql.connector.Error as err:
                     if err.errno == 1062:  # Numéro d'erreur MySQL pour la violation de contrainte d'unicité
@@ -998,7 +1089,14 @@ class ReceiverThread(QThread):
                         print(f"Erreur MySQL : {err}")
         except Exception as e:
             print(e)
-            raise "error"
+    
+    def new_private_user(self, alias, user, code_conn):
+        reply = f"NEW_USER|Général|{alias} @{user}"
+        conn_list = self.all_threads
+        conn_list.remove(code_conn)
+        self.sender_thread = SenderThread(reply, conn_list)
+        self.sender_thread.start()
+        self.sender_thread.wait()
 
     def salon(self, signup):
         create_user_query = f"INSERT INTO acces_salon (nom, date, user) VALUES ('Général', NOW(), (SELECT id_user FROM user WHERE username = '{signup[0]}'))"
@@ -1043,6 +1141,7 @@ class ReceiverThread(QThread):
                             self.notifications(code_conn)
                             self.demandes(code_conn)
                             self.profil(auth[0], code_conn)
+                            self.private(auth[0], code_conn)
                         except:
                             pass
 
@@ -1062,6 +1161,24 @@ class ReceiverThread(QThread):
             reply = f"{reply}|2|L'UTILISATEUR N'A PAS ÉTÉ TROUVÉ"
             self.send_code(reply, code_conn)
 
+    def private(self, user, code_conn):
+        private_query = f"""
+            SELECT p.*, u1.username AS user1_username, u2.username AS user2_username
+            FROM private p
+            JOIN user u1 ON p.user1 = u1.id_user
+            JOIN user u2 ON p.user2 = u2.id_user
+            WHERE u1.username = '{user}' OR u2.username = '{user}'
+        """
+        cursor = conn.cursor()
+        cursor.execute(private_query)
+        
+        result = cursor.fetchall()
+
+        for i in range(len(result)):
+            print(result[i])
+            date = result[i][4].strftime("%d/%m/%Y %H:%M")
+            reply = f"PRIVATE|{result[i][5]}|{result[i][6]}|{result[i][3]}|{date}|{user}"
+            self.send_history(reply, code_conn)
 
     def profil(self, user, code_conn):
         profil_query = f"SELECT * FROM user where username = '{user}'"
@@ -1305,6 +1422,8 @@ class SenderThread(QThread):
         reply = self.reply.split("|")
         if reply[0] == "Serveur":
             reply = f'Serveur|{date} - {reply[0]} ~~|{reply[1]}'
+        elif reply[0] == "NEW_USER":
+            reply = f"NEW_USER|{reply[1]}|{reply[2]}"
         else:
             username = reply[1].split("/")
 
@@ -1623,12 +1742,16 @@ class Login(QMainWindow):
                 window.show()
             else:
                 self.errorbox("B")
+        else:
+            self.errorbox("E")
 
     def errorbox(self, code):
         error = QMessageBox()
         error.setWindowTitle("Erreur")
         if code == "B":
             content = "(B) Mot de passe incorrect."
+        elif code == "E":
+            content = "(E) Nom d'utilisateur incorrect"
         error.setText(content)
         error.setIcon(QMessageBox.Warning)
         error.exec()

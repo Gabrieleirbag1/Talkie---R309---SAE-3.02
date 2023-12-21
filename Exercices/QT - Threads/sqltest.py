@@ -1,64 +1,100 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QTextEdit
+from PyQt5.QtWidgets import *
 
-class MyWidget(QWidget):
+class UsersWidget(QWidget):
+    def __init__(self, button_name, parent=None):
+        super().__init__(parent)
+        self.button_name = button_name
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        self.button1 = QPushButton("Bouton 1", self)
+        self.button2 = QPushButton("Bouton 2", self)
+
+        layout.addWidget(self.button1)
+        layout.addWidget(self.button2)
+        
+
+class MessagerieWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.initUI()
+        self.init_ui()
 
-    def initUI(self):
-        # Création de la liste widget à gauche
-        self.button_list = QListWidget()
+    def init_ui(self):
+        # Layout principal
+        layout = QHBoxLayout(self)
 
-        # Création du layout principal
-        main_layout = QHBoxLayout(self)
-        self.setLayout(main_layout)
+        # Liste des boutons (1 tiers gauche)
+        button_layout = QVBoxLayout()
+        self.button_list = QListWidget(self)
+        button_layout.addWidget(self.button_list)
 
-        # Layout pour les boutons à gauche
-        left_layout = QVBoxLayout()
-        main_layout.addLayout(left_layout)
+        # Bouton Ajouter
+        add_button = QPushButton("Ajouter", self)
+        add_button.clicked.connect(self.add_button_clicked)
+        button_layout.addWidget(add_button)
 
-        # Layout pour les text edits à droite
-        right_layout = QVBoxLayout()
-        main_layout.addLayout(right_layout)
+        # Ajout du layout des boutons au layout principal
+        layout.addLayout(button_layout)
 
-        # Bouton "Ajouter"
-        add_button = QPushButton("Ajouter")
-        add_button.clicked.connect(self.addNewButton)
-        left_layout.addWidget(add_button)
+        # Layout du TextEdit (2 tiers droit)
+        self.text_edit_layout = QVBoxLayout()
+        self.text_edit = QTextEdit(self)
+        self.text_edit_layout.addWidget(self.text_edit)
 
-        # Ajout d'un bouton initial à la liste
-        self.addButton("Bouton 1")
+        # Ajout du QLineEdit
+        self.line_edit = QLineEdit(self)
+        self.text_edit_layout.addWidget(self.line_edit)
 
-        # Événement de clic sur les boutons
-        self.button_list.itemClicked.connect(self.showTextEdit)
+        # Ajout du bouton "Envoyer"
+        send_button = QPushButton("Envoyer", self)
+        send_button.clicked.connect(self.send_button_clicked)
+        self.text_edit_layout.addWidget(send_button)
 
-        self.show()
+        # Ajout du layout du TextEdit au layout principal
+        layout.addLayout(self.text_edit_layout)
 
-    def addButton(self, button_text):
-        # Ajout d'un bouton à la liste
-        button = QPushButton(button_text)
-        self.button_list.addItem(button)
+        # Ajustement des proportions (2 tiers - 1 tiers)
+        layout.setStretch(0, 1)
+        layout.setStretch(1, 2)
 
-    def showTextEdit(self, item):
-        # Récupération du texte du bouton
-        button_text = item.text()
+        self.setLayout(layout)
+        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle('Messagerie')
 
-        # Création d'un nouvel objet QTextEdit
-        text_edit = QTextEdit(f"Contenu du {button_text}")
+    def send_button_clicked(self):
+        # Récupère le texte du QLineEdit et l'ajoute au QTextEdit
+        text_to_append = self.line_edit.text()
+        if text_to_append:
+            current_text = self.text_edit.toPlainText()
+            self.text_edit.setPlainText(f"{current_text}\n{text_to_append}")
+            self.line_edit.clear()
 
-        # Ajout du QTextEdit au layout de droite
-        self.layout().itemAt(1).layout().addWidget(text_edit)
 
-    def addNewButton(self):
-        # Récupération du nombre actuel de boutons dans la liste
-        button_count = self.button_list.count()
+    def add_button_clicked(self):
+        # Ajoute un nouvel élément à la liste
+        new_button_name = f"Bouton {self.button_list.count() + 1}"
+        button_widget = UsersWidget(new_button_name)
+        item = QListWidgetItem(self.button_list)
+        item.setSizeHint(button_widget.sizeHint())
+        self.button_list.setItemWidget(item, button_widget)
 
-        # Ajout d'un nouveau bouton à la liste
-        self.addButton(f"Bouton {button_count + 1}")
+        # Connecte le signal pressed du bouton 2 à l'affichage du TextEdit
+        button_widget.button2.clicked.connect(lambda: self.show_text_edit(button_widget))
+
+    def show_text_edit(self, button_widget):
+        # Change le contenu du TextEdit en fonction du bouton cliqué
+        button_name = button_widget.button_name
+        self.text_edit.setPlainText(f"Contenu pour {button_name}")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = MyWidget()
+    window = MessagerieWindow()
+    window.show()
     sys.exit(app.exec_())
+
+
+
+'''CRÉE UN DICTIONNAIRE POUR STOCKER POUR CHAQUE TEXT EDIT'''

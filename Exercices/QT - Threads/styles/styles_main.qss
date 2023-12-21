@@ -83,12 +83,16 @@ QPushButton#send_button:hover {
 
 /* Style for QPushButton (friends_button) */
 QPushButton#friends_button {
-    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 20, 45, 1), stop: 1 rgba(0, 35, 45, 1));
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 45, 135, 1), stop: 1 rgba(0, 40, 165, 1));
     font-family: Arial;
     font-size: 40px;
     border-radius: 12px;
     color: #f0f0f0; /* Light gray text color */
     border: 1px solid rgba(255, 255, 255, 0.7); /* White border */
+}
+
+QPushButton#friends_button:hover {
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(0, 55, 190, 1), stop: 1 rgba(0, 70, 210, 1));
 }
 
 
