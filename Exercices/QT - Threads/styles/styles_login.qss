@@ -67,6 +67,10 @@ QComboBox:disabled QAbstractItemView{
     color: darkgray; /* Light gray text color */
 }
 
+QLineEdit:disabled{
+    color: darkgray;
+}
+
 QLabel:disabled {
     color:darkgray
 }
@@ -109,5 +113,17 @@ QMessageBox{
 }
 
 QScrollBar:vertical {
-                background: #1e1e1e;
+    background: #1e1e1e;
+}
+
+QScrollBar:horizontal {
+    background: #1e1e1e;
+}
+
+QWidget#Messagerie{
+       background-color: rgb(8, 8, 70);
+}
+
+QWidget#Friends{
+    background-color: rgb(8, 8, 70);
 }

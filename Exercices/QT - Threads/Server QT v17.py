@@ -38,6 +38,10 @@ class ReceiverThread(QThread):
     Methods:
         run(): La méthode run permet de lancer le QThread de réception de message.
 
+        friends(user, code_conn): Envoie au nouveau client connecté la liste d'amis selon qui il est
+
+        delete_friend(user, code_conn): Supprime la relation amicale entre deux utilisateurs, et envoie aux clients connectés concernés cette modification pour que ce soit mis à jour graphiquement
+
         user_profil(user, code_conn): Envoie le profl de l'utilisateur sélectionné par le client
         
         stop(all_threads): Arrête le serveur après la commande /stop
@@ -59,6 +63,10 @@ class ReceiverThread(QThread):
         
         create_demande(demande, demande_conn): Vérifie le type de demande pour rediriger vers la bonne fonction
         
+        demande_ami(demande, code_conn): Vérifie si l'utilisateur a déjà en ami un autre utilisateur
+        
+        check_ami_accept(user, friend, code_conn): Vérifie si le user concerné a accepté la demande d'ami, selon le cas il renvoie vers une fonction accept/refuse, mets aussi les informations en cas d'accept directement chez les clients.
+
         demande_admin(demande, code_conn): Vérifie si l'utilisateur demandant les droits admin l'est déjà
         
         send_demande_admin(username, code_conn): Ajoute à la bdd la demande admin et l'envoie aux clients administrateurs connectés
@@ -79,24 +87,36 @@ class ReceiverThread(QThread):
         
         accept(user, salon): Accept une demande et envoie la réponse positive au client concerné
         
+        accept_friend(user, salon): Accept une demande et envoie la réponse positive au client concerné (spécifique aux amis)
+
         delete_reponse(demandeur, type, receveur, concerne, validate): Supprime la réponse concernant le client demandeur de la BDD.
         
         new_salon(username, salon, code_conn): Ajoute à la BDD un nouvel accès à un salon précis pour un client
         
         send_new_salon(salon, code_conn): Envoie le code succès qui débloque en temps réel chez le client l'accès à un salon
+
+        send_new_user(salon, code_conn): Envoie dans la liste des utilisateurs d'un salon spécifique chez le client, le nouvel utilisateur ayant à présent accès à ce salon
+        
+        send new_friend(user, friend): Renvoie aux utilisateurs concernés leur nouvel ami (qu'ils sont en fait respectivement) et cherche l'alias correspondant.
         
         send_new_admin(code_conn): Envoie le code succès qui débloque en temps réel chez le client les droits administrateur
         
         add_admin(user): Ajoute les droits administrateur à l'utilisateur concerné dans la BDD
         
+        new_friend(username, concerne): Ajoute la nouvelle relation ami à la BDD.
+
         new_salon2(username, salon): Ajoute à la BDD un nouvel accès à un salon précis pour un client mais ne renvoie pas le code d'accès à l'utilisateur
         
         refuse(user, salon): Envoie au client concerné la réponse négative
         
+        refuse(user, salon): Envoie au client concerné la réponse négative (spécifique aux amis)
+
         delete_demande(user, salon): Supprime la demande suite à une réponse 
         
         check_admin(user): Vérifie si l'utilisateur est admin
         
+        check_ami(friend1, friend2): Vérifie si l'utilisateur est ami avec celui a qui il veut faire une demande
+
         check_sanction(user): Vérifie si l'utilisateur a une sanction
         
         new_sanction(user, date_fin, sanction_type, code_conn, argument): Crée une sanction de type kick ou ban, en vérifiant l'argument (-a, -p) de la commande. 
@@ -171,6 +191,7 @@ class ReceiverThread(QThread):
             while not flag:
                 recep = self.conn.recv(1024).decode() #Salon|user/pswd|msg
                 message = recep.split("|")
+                user_profil = recep.split("|")
 
                 try:
                     sanction = message[2].split(" ")
@@ -202,7 +223,11 @@ class ReceiverThread(QThread):
                             reply = f"CODE|29|USER DEJA ACCES AU SALON"
                             self.send_code(reply, self.conn)
                     elif type == "Admin":
-                        self.check_admin_accept(user, concerne)
+                        self.check_admin_accept(user, concerne, self.conn)
+
+                    elif type == "Ami":
+                        print("ami")
+                        self.check_ami_accept(user, concerne, self.conn)
                     else:
                         print("validate error")
 
@@ -221,12 +246,16 @@ class ReceiverThread(QThread):
                     self.update_profil(message, self.conn)
 
                 elif message[0] == "USER_PROFIL":
-                    print(message)
-                    self.user_profil(message[1], self.conn)
+                    print(user_profil)
+                    self.user_profil(user_profil[1], self.conn)
 
                 elif message[0] == "PRIVATE":
                     print("PRIVATE MESSAGE")
                     self.private_message(message, self.conn)
+
+                elif message[0] == "DELETE_FRIEND":
+                    print('DELETE FRIEND')
+                    self.delete_friend(message, self.conn)
 
                 elif message[2] == "" or message[2] == " ": #pas de message vide
                     pass
@@ -356,8 +385,78 @@ class ReceiverThread(QThread):
         except ConnectionResetError:
             print("Une connexion réinitalisée a provoquée l'arrêt d'un client.")
 
-
         print("ReceiverThread ends\n")
+
+    def delete_friend(self, user, code_conn):
+        """delete_friend(user, code_conn): Supprime la relation amicale entre deux utilisateurs, et envoie aux clients connectés concernés cette modification pour que ce soit mis à jour graphiquement"""
+        print("delete_reponse")
+        conn_list = []
+        friend1 = user[1]
+        friend2 = user[2]
+        print(friend1)
+        print(friend2)
+        delete_friend_query = f"DELETE FROM friends WHERE friend1 = '{friend1}' AND friend2 = '{friend2}' OR friend1 = '{friend2}' AND friend2 = '{friend1}'"
+        cursor = conn.cursor()
+        cursor.execute(delete_friend_query)
+        conn.commit()
+        self.close(cursor)
+        
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == friend1:
+                    conn_list.append(user_conn['Conn'][i])
+            try:
+                for friend_conn in conn_list:
+                    reply = f"DELETE_FRIEND|{friend1}|{friend2}"
+                    self.send_code(reply, friend_conn)
+            except Exception as e:
+                print(e)
+        except Exception as e:
+            print(e)
+
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == friend2:
+                    if conn_list != code_conn:
+                        conn_list.append(user_conn['Conn'][i])
+            try:
+                for friend_conn in conn_list:
+                    reply = f"DELETE_FRIEND|{friend2}|{friend1}"
+                    self.send_code(reply, friend_conn)
+            except Exception as e:
+                print(e)
+        except Exception as e:
+            print(e)
+
+#FAIRE ENCORE check_ami_accept (VALIDATE) ici et tout ce qui est demande d'ami côté client (format DEMANDE|demandé/demandeur|AMI)
+    def friends(self, user, code_conn):
+        """friends(user, code_conn): Envoie au nouveau client connecté la liste d'amis selon qui il est"""
+        friends_query = f"SELECT * FROM friends where friend1 = '{user}' or friend2 = '{user}'"
+        cursor = conn.cursor()
+        cursor.execute(friends_query)
+        result = cursor.fetchall()
+        self.close(cursor)
+
+        print("FREIND")
+        print(result)
+
+        for i in range(len(result)):
+            friend1 = result[i][1]
+            friend2 = result[i][2]
+            friend = friend1 if user == friend2 else friend2
+            i+=1
+
+            friends_query = f"SELECT alias FROM user where username = '{friend}'"
+            cursor = conn.cursor()
+            cursor.execute(friends_query)
+            resulto = cursor.fetchone()
+            alias = resulto[0]
+            self.close(cursor)
+
+            reply = f"FRIENDS|{friend}|{alias}" #pour le nouvel ami à la liste
+            self.send_code(reply, code_conn)
+
+
 
     def user_profil(self, user, code_conn):
         """
@@ -516,7 +615,7 @@ class ReceiverThread(QThread):
         print(user)
 
         if self.check_admin(user):
-            nb_msg_query = f"SELECT * FROM demande where receveur = 'Admin'"
+            nb_msg_query = f"SELECT * FROM demande where receveur = 'Admin' OR receveur = '{user}' AND type = 'Ami'"
 
         else:
             nb_msg_query = f"SELECT * FROM demande where receveur = '{user}'"
@@ -608,6 +707,87 @@ class ReceiverThread(QThread):
             print("REPONSE")
             self.demande_reponse(demande, demande_conn)
 
+    def demande_ami(self, demande, code_conn):
+        """
+        demande_ami(demande, code_conn): Vérifie si l'utilisateur a déjà en ami un autre utilisateur
+        """
+        friend1 = demande[1]
+        friend2 = demande[3]
+        if self.check_user_exists(friend2):
+            if not self.check_ami(friend1, friend2):
+                self.send_demande_ami(friend1, friend2, code_conn)
+            else:
+                reply = f"CODE|32|DÉJÀ AMI"
+                self.send_code(reply, code_conn)
+
+        else:
+            reply = f"CODE|33|UTILISATEUR N'EXISTE PAS (DEMANDE D'AMI)"
+            self.send_code(reply, code_conn)
+
+    def check_ami_accept(self, user, friend, code_conn):
+        """
+        check_ami_accept(user, friend, code_conn): Vérifie si le user concerné a accepté la demande d'ami, selon le cas il renvoie vers une fonction accept/refuse, mets aussi les informations en cas d'accept directement chez les clients
+        """
+        #friend est bien celui qui a accepté la demande de user
+        # ex: Admin et Chap/ACCEPT-REFUSE
+        friend = friend.split("/")
+        friend_nom = friend[0]
+        accept = friend[1]
+        conn_list = []
+        print(friend)
+        ami = [friend_nom]
+        if not self.check_ami(user, friend_nom):
+            if accept == "ACCEPT":
+                self.send_new_friend(user, friend_nom)
+                self.new_friend(user, friend_nom)
+                self.delete_demande(user, ami)
+                self.accept_friend(user, ami)
+                    
+            else:
+                self.refuse_friend(user, ami)
+        else:
+            reply = f"CODE|32|DÉJÀ AMI"
+            self.send_code(reply, code_conn)
+
+    def send_demande_ami(self, friend1, friend2, code_conn):
+        """
+        send_demande_admin(username, code_conn): Ajoute à la bdd la demande admin et l'envoie aux clients administrateurs connectés
+        """
+        print("send_demande_ami")
+        conn_list = []
+        if not self.check_demande_friend(friend2, friend1): 
+            print("demande checked")
+            create_demande_query = f"INSERT INTO demande (type, date_demande, demandeur, receveur, concerne) VALUES ('Ami', NOW(), '{friend1}', '{friend2}', '{friend2}')" #concerne devient le client demandé en ami
+            cursor = conn.cursor()
+            cursor.execute(create_demande_query)
+            conn.commit()
+            self.close(cursor)
+
+            date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+           
+            reply = f"DEMANDE|{friend1}|Ami|{friend2}|{date}|NULL/Salon"#on précise le type de requête DEMANDE
+            try :
+                for i, is_admin in enumerate(user_conn['Username']):
+                    if is_admin == friend2:
+                        conn_list.append(user_conn['Conn'][i])
+                try:
+                    for admin_conn in conn_list:
+                        print("send ami")
+                        print(reply)
+                        try:
+                            self.send_history(reply, admin_conn)
+                            print("send ami fin")
+                        except:
+                            continue
+                except:
+                    pass
+            except :
+                pass
+
+        else:
+            reply = f"CODE|28|DEMANDE DÉJÀ FAITE"
+            self.send_code(reply, code_conn)
+
     def demande_admin(self, demande, code_conn):
         """
         demande_admin(demande, code_conn): Vérifie si l'utilisateur demandant les droits admin l'est déjà
@@ -657,7 +837,7 @@ class ReceiverThread(QThread):
             reply = f"CODE|28|DEMANDE DÉJÀ FAITE"
             self.send_code(reply, code_conn)
 
-    def check_admin_accept(self, user, admin):
+    def check_admin_accept(self, user, admin, code_conn):
         """
         check_admin_accept(user, admin): Vérifie si l'admin a accepté la demande admin, selon le cas il renvoie vers une fonction accept/refuse
         """
@@ -665,51 +845,55 @@ class ReceiverThread(QThread):
         accept = admin[1]
         conn_list = []
         print(admin)
-        if accept == "ACCEPT":
-            try :
-                for i, username in enumerate(user_conn['Username']):
-                    if username == user:
-                        conn_list.append(user_conn['Conn'][i])
-                try:
-                    for admin_conn in conn_list:
-                        self.send_new_admin(admin_conn)
-                except Exception as e:
-                    print(e)
-            except Exception as e:
-                print(e)
-            self.add_admin(user)
-            index = user_conn['Username'].index(user)
-            user_conn['SuperUser'][index] = '1'
+        if not self.check_admin(user):
+            if accept == "ACCEPT":
+                    try :
+                        for i, username in enumerate(user_conn['Username']):
+                            if username == user:
+                                conn_list.append(user_conn['Conn'][i])
+                        try:
+                            for admin_conn in conn_list:
+                                self.send_new_admin(admin_conn)
+                        except Exception as e:
+                            print(e)
+                    except Exception as e:
+                        print(e)
+                    self.add_admin(user)
+                    index = user_conn['Username'].index(user)
+                    user_conn['SuperUser'][index] = '1'
 
-            i = 0
-            while i < 5:
-                if i == 0:
-                    salon = "Général"
-                elif i == 1:
-                    salon = "Blabla"
-                elif i == 2:
-                    salon = "Comptabilité"
-                elif i == 3:
-                    salon = "Informatique"
-                elif i == 4:
-                    salon = "Marketing"
-                i += 1
-                if not self.checkroom2(user, salon):
-                    try:
-                        for admin_conn in conn_list:
-                            self.send_new_salon(salon, admin_conn)
-                            lesalon = [salon]
-                            self.new_salon2(user, lesalon)
-                    except:
-                        pass
-                else:
-                    continue
+                    i = 0
+                    while i < 5:
+                        if i == 0:
+                            salon = "Général"
+                        elif i == 1:
+                            salon = "Blabla"
+                        elif i == 2:
+                            salon = "Comptabilité"
+                        elif i == 3:
+                            salon = "Informatique"
+                        elif i == 4:
+                            salon = "Marketing"
+                        i += 1
+                        if not self.checkroom2(user, salon):
+                            try:
+                                for admin_conn in conn_list:
+                                    self.send_new_salon(salon, admin_conn)
+                                    lesalon = [salon]
+                                    self.new_salon2(user, lesalon)
+                            except:
+                                pass
+                        else:
+                            continue
+                    
+                    self.delete_demande(user, admin)
+                    self.accept(user, admin)   
+            else:
+                self.refuse(user, admin)
+        else:            
+            reply = f"CODE|34|DÉJÀ ADMIN"
+            self.send_code(reply, code_conn)
             
-            self.delete_demande(user, admin)
-            self.accept(user, admin)
-                
-        else:
-            self.refuse(user, admin)
 
     def demande_salon(self, demande, code_conn):
         """
@@ -741,6 +925,16 @@ class ReceiverThread(QThread):
             conn.commit()
             self.close(cursor)
 
+        elif reponse[1] == 'Ami':
+            if reponse[0] == "0":
+                validate = 0
+            elif reponse[0] == "1":
+                validate = 1
+            create_demande_query = f"INSERT INTO demande (type, date_demande, demandeur, receveur, concerne, validate, reponse) VALUES ('Ami', NOW(), '{demande[1]}', '{demande[1]}', '{demande[3]}', '{validate}', 1)"
+            cursor = conn.cursor()
+            cursor.execute(create_demande_query)
+            conn.commit()
+            self.close(cursor)
 
     def send_demande_salon(self, username, salon, code_conn):
         """
@@ -785,7 +979,26 @@ class ReceiverThread(QThread):
         try:
             print(concerne)
             print(username)
-            msg_query = f"SELECT * FROM demande WHERE concerne = '{concerne}' AND demandeur = '{username}'"
+            msg_query = f"SELECT * FROM demande WHERE concerne = '{concerne}' AND demandeur = '{username}' or concerne = '{username}' AND demandeur = '{concerne}'"
+            cursor = conn.cursor()
+            cursor.execute(msg_query)
+            result = cursor.fetchone()
+            self.close(cursor)
+            print(result)
+
+            if result[0]:
+                return True
+        except:
+            return False
+
+    def check_demande_friend(self, username, concerne):
+        """
+        check_demande(username, concerne) -> Bool: Vérifie si la demande existe pour ne pas faire de doublons
+        """
+        try:
+            print(concerne)
+            print(username)
+            msg_query = f"SELECT * FROM demande WHERE concerne = '{concerne}' demandeur = '{username}' AND reponse = 0 or concerne = '{username}' AND demandeur = '{concerne}' AND reponse = 0"
             cursor = conn.cursor()
             cursor.execute(msg_query)
             result = cursor.fetchone()
@@ -874,6 +1087,37 @@ class ReceiverThread(QThread):
         self.create_demande(reply, demandeur_conn)
         print('accepted')
 
+    def accept_friend(self, user, salon):
+        """
+        accept_friend(user, salon): Accept une demande et envoie la réponse positive au client concerné (spécifique aux amis)
+        """
+        print("accept")
+        
+        self.delete_demande(user, salon)
+
+        conn_list = []
+
+        date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == user:
+                    conn_list.append(user_conn['Conn'][i])
+
+            try:
+                for demandeur_conn in conn_list:
+                    reply = f"DEMANDE|{user}|Reponse|{salon[0]}|{date}|1/Ami"
+                    self.send_code(reply, demandeur_conn)
+                print("create demande")
+                reply = reply.split("|")
+            except:
+                pass 
+        except :
+            pass
+
+        self.create_demande(reply, demandeur_conn)
+        print('accepted')
+
     def delete_reponse(self, demandeur, type, receveur, concerne, validate):
         """
         delete_reponse(demandeur, type, receveur, concerne, validate): Supprime la réponse concernant le client demandeur de la BDD.
@@ -907,9 +1151,80 @@ class ReceiverThread(QThread):
         try:
             reply = f"CODE|27/{salon}|ACCES SALON SPÉCIFIQUE"
             self.send_code(reply, code_conn)
+            self.send_new_user(salon, code_conn)
         except Exception as e:
-            print("nog")
             print(e)
+    
+    def send_new_user(self, salon, code_conn):
+        """send_new_user(salon, code_conn): Envoie dans la liste des utilisateurs d'un salon spécifique chez le client, le nouvel utilisateur ayant à présent accès à ce salon"""
+        index_conn = user_conn['Conn'].index(code_conn)
+        user = user_conn['Username'][index_conn]
+
+        msg_query = f"SELECT alias FROM user WHERE username = '{user}'"
+        cursor = conn.cursor()
+        cursor.execute(msg_query)
+        result = cursor.fetchone()
+        alias = result[0]
+        self.close(cursor)
+
+        reply = f"NEW_USER|{salon}|{alias} @{user}"
+        self.sender_thread = SenderThread(reply, self.all_threads)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    
+    def send_new_friend(self, user, friend):
+        """
+        send new_friend(user, friend): Renvoie aux utilisateurs concernés leur nouvel ami (qu'ils sont en fait respectivement) et cherche l'alias correspondant.
+        """
+        #friend est bien celui qui a accepté la demande de user
+        conn_list = []
+        msg_query = f"SELECT alias FROM user WHERE username = '{friend}'"
+        cursor = conn.cursor()
+        cursor.execute(msg_query)
+        result = cursor.fetchone()
+        alias = result[0]
+        self.close(cursor)
+
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == user:
+                    conn_list.append(user_conn['Conn'][i])
+
+            try:
+                for demandeur_conn in conn_list:
+                    reply = f"NEW_FRIEND|{friend}|{alias}"
+                    self.send_code(reply, demandeur_conn)
+                print("create demande")
+                reply = reply.split("|")
+            except:
+                pass 
+        except :
+            pass
+        
+        conn_list2 = []
+        msg_query = f"SELECT alias FROM user WHERE username = '{user}'"
+        cursor = conn.cursor()
+        cursor.execute(msg_query)
+        result = cursor.fetchone()
+        alias = result[0]
+        self.close(cursor)
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == friend:
+                    conn_list2.append(user_conn['Conn'][i])
+
+            try:
+                for demandeur_conn in conn_list2:
+                    reply = f"NEW_FRIEND|{user}|{alias}"
+                    self.send_code(reply, demandeur_conn)
+                print("create demande")
+                reply = reply.split("|")
+            except:
+                pass 
+        except :
+            pass
+
 
     def send_new_admin(self, code_conn):
         """
@@ -935,6 +1250,19 @@ class ReceiverThread(QThread):
 
         self.close(cursor)
 
+    def new_friend(self, username, concerne):
+        """
+        new_friend(username, concerne): Ajoute la nouvelle relation ami à la BDD.
+        """
+        print("new friend")
+        create_friendship_query = f"INSERT INTO friends (friend1, friend2, date) VALUES ('{username}', '{concerne}', NOW())"
+        cursor = conn.cursor()
+        cursor.execute(create_friendship_query)
+        conn.commit()
+
+        self.close(cursor)
+
+        
 
     def new_salon2(self, username, salon):
         """
@@ -979,6 +1307,37 @@ class ReceiverThread(QThread):
         self.create_demande(reply, demandeur_conn)
         print('fact')
 
+    def refuse_friend(self, user, salon):
+        """
+        refuse(user, salon): Envoie au client concerné la réponse négative (spécifique aux amis)
+        """
+        print("refuse")
+        
+        self.delete_demande(user, salon)
+
+        conn_list = []
+
+        date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        try :
+            for i, username in enumerate(user_conn['Username']):
+                if username == user:
+                    conn_list.append(user_conn['Conn'][i])
+
+            try:
+                for demandeur_conn in conn_list:
+                    reply = f"DEMANDE|{user}|Reponse|{salon[0]}|{date}|0/Ami"
+                    self.send_code(reply, demandeur_conn)
+                print("create demande")
+                reply = reply.split("|")
+            except:
+                pass 
+        except :
+            pass
+
+        self.create_demande(reply, demandeur_conn)
+        print('fact')
+
     def delete_demande(self, user, salon):
         """
         delete_demande(user, salon): Supprime la demande suite à une réponse 
@@ -1006,6 +1365,25 @@ class ReceiverThread(QThread):
         if is_admin:
             return True
         else:
+            return False
+        
+    def check_ami(self, friend1, friend2):
+        """
+        check_ami(friend1, friend2): Vérifie si l'utilisateur est ami avec celui a qui il veut faire une demande
+        """
+        try:
+            msg_query = f"SELECT * FROM friends WHERE friend1 = '{friend1}' and friend2 = '{friend2}' or friend1 = '{friend2}' and friend2 = '{friend1}'"
+            cursor = conn.cursor()
+            cursor.execute(msg_query)
+            
+            result = cursor.fetchone()
+            is_admin = result[0]
+            self.close(cursor)
+            if is_admin:
+                return True
+            else:
+                return False
+        except TypeError:
             return False
 
     def check_sanction(self, user):
@@ -1185,7 +1563,7 @@ class ReceiverThread(QThread):
         check_user_exists(user) -> Bool: Vérifie si l'utilisateur existe lors d'une inscription d'un client.
         """
         try:
-            user_query = f"SELECT * from user where username = '{user}'"
+            user_query = f"SELECT * FROM user WHERE BINARY username = '{user}'" #binart permet de vérifier même les caractères sensibles à la casse comme les majuscules
             cursor = conn.cursor()
             cursor.execute(user_query)
             result = cursor.fetchone()
@@ -1314,22 +1692,30 @@ class ReceiverThread(QThread):
             
             else :
                 try :
-                    create_user_query = "INSERT INTO user (username, password, mail, date_creation, alias) VALUES (%s, %s, %s, %s, %s)"
-                    cursor = conn.cursor()
-                    data = (signup[0], signup[3], signup[2], date_creation, signup[1])
-                    cursor.execute(create_user_query, data)
-                    conn.commit()
-                    
-                    self.salon(signup)
+                    if signup[0] != "Admin" and signup[0] != "admin":
+                        if not re.search(r"\s", signup[0]):
+                            create_user_query = "INSERT INTO user (username, password, mail, date_creation, alias) VALUES (%s, %s, %s, %s, %s)"
+                            cursor = conn.cursor()
+                            data = (signup[0], signup[3], signup[2], date_creation, signup[1])
+                            cursor.execute(create_user_query, data)
+                            conn.commit()
+                            
+                            self.salon(signup)
 
-                    reply = f"{reply}|4|SIGN UP SUCCESS"
-                    self.send_code(reply, code_conn)
+                            reply = f"{reply}|4|SIGN UP SUCCESS"
+                            self.send_code(reply, code_conn)
 
-                    self.new_private_user(signup[1], signup[0], code_conn)
-                    
+                            self.new_private_user(signup[1], signup[0], code_conn)
+                        else:
+                            reply = f"{reply}|9|CARACTERES NON AUTORISÉS"
+                            self.send_code(reply, code_conn)
+                    else:
+                        reply = f"{reply}|8|USERNAME NON UNIQUE OU INTERDIT"
+                        self.send_code(reply, code_conn)
+                        
                 except mysql.connector.Error as err:
                     if err.errno == 1062:  #Numéro d'erreur MySQL pour la violation de contrainte d'unicité
-                        reply = f"{reply}|8|USERNAME NON UNIQUE"
+                        reply = f"{reply}|8|USERNAME NON UNIQUE OU INTERDIT"
                         self.send_code(reply, code_conn)
                     elif err.errno == 3819:
                         reply = f"{reply}|9|CARACTERES NON AUTORISÉS"
@@ -1404,6 +1790,7 @@ class ReceiverThread(QThread):
                             self.demandes(code_conn)
                             self.profil(auth[0], code_conn)
                             self.private(auth[0], code_conn)
+                            self.friends(auth[0], code_conn)
                         except:
                             pass
 
@@ -1440,7 +1827,6 @@ class ReceiverThread(QThread):
         result = cursor.fetchall()
 
         for i in range(len(result)):
-            print(result[i])
             date = result[i][4].strftime("%d/%m/%Y %H:%M")
             reply = f"PRIVATE|{result[i][5]}|{result[i][6]}|{result[i][3]}|{date}|{user}"
             self.send_history(reply, code_conn)
@@ -1912,6 +2298,7 @@ class AcceptThread(QThread):
             self.listen()
             self.connect.connect(self.sender)
             self.send.returnPressed.connect(self.sender)
+
             while not arret:
                 print("En attente d'une nouvelle connexion")
                 self.conn, self.address = self.server_socket.accept()
@@ -1961,6 +2348,7 @@ class AcceptThread(QThread):
 
         self.log.append(f'({message[0]} - {conn_info}) {user[0]} ~~ {message[2]}') 
     
+
     def listen(self):
         """
         listen(): Permet de définir le temps d'écoute du socket du serveur vis à vis des connexions client.
@@ -1972,10 +2360,13 @@ class AcceptThread(QThread):
         sender(): Appel el thread SenderThread pour envoyer un message Serveur aux clients.
         """
         reply = self.send.text()
-        self.send.setText("")
-        self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        date = datetime.datetime.now().strftime("%H%M")
+        if reply != "" and reply != " ":
+            self.log.append(f"{date} - Serveur ~~ {reply}")
+            self.send.setText("")
+            self.sender_thread = SenderThread(f'Serveur| {reply}', self.all_threads)
+            self.sender_thread.start()
+            self.sender_thread.wait()
 
     def send_everyone(self, message):
         """
@@ -2288,25 +2679,36 @@ class Sign_up(QMainWindow):
                 self.errorbox("F")
                 return
             
-            self.create_super_user(username, alias, mail, mdp)
-            self.successBox("A")
-            self.close()
+            if username != "" and alias != "" and mdp != "":
+                if username != "Admin" and username != "admin":
+                    if not re.search(r"\s", username):
+                        self.create_super_user(username, alias, mail, mdp)
+                        self.successBox("A")
+                        self.close()
+                    else:
+                        self.errorbox("G")
+                else:
+                    self.errorbox("D")
 
         except mysql.connector.Error as err:
             if err.errno == 1062:  #Numéro d'erreur MySQL pour la violation de contrainte d'unicité
                 self.errorbox("D")
             elif err.errno == 3819:
-                self.errorbox("E")
+                self.errorbox("G")
 
     def errorbox(self, code):
         error = QMessageBox()
         error.setWindowTitle("Erreur")
         if code == "C":
             content = "(C) Les mots de passe ne sont pas identiques."
-        elif code == "D":
-            content = "(D) Les caractères ne sont pas autorisés : %, #, &, '"
+        elif code == "G":
+            content = "(G) Les caractères ne sont pas autorisés : %, #, &, ', [espace]"
         elif code == 'F':
             content = "(F) Le mail ne respect pas le format."
+        elif code == 'D':
+            content = "(D) Le nom d'utilisateur n'est pas unique ou est interdit."
+        else:
+            content = "Erreur inconnue"
         error.setText(content)
         error.setIcon(QMessageBox.Warning)
         error.exec()
@@ -2321,7 +2723,7 @@ class Sign_up(QMainWindow):
             success.exec()
             self.quitter()
         else:
-            self.errorBox(code)
+            self.errorbox(code)
 
     def quitter(self):
         self.close()

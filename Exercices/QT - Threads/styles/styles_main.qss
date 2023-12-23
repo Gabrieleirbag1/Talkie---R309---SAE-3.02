@@ -1,3 +1,8 @@
+QMessageBox{
+    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(11, 38, 112, 1), stop: 1 rgba(0, 35, 80, 1));
+    color: #f0f0f0; /* Light gray text color */
+}
+
 QLabel#label{
     color: #f0f0f0;
     background-color: transparent;
@@ -463,11 +468,6 @@ QPushButton#friends_button5 {
 
 QPushButton#friends_button5:hover {
     background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(4, 78, 100, 1), stop: 1 rgba(3, 90, 116, 1));
-}
-
-QMessageBox{
-    background-color: qlineargradient(x1: 0, x2: 1, stop: 0 rgba(11, 38, 112, 1), stop: 1 rgba(0, 35, 80, 1));
-    color: #f0f0f0; /* Light gray text color */
 }
 
 QScrollBar:vertical{

@@ -16,11 +16,11 @@ def get_address_ip():
     except socket.error:
         return None
 
-flag = False
 
 host, port = (str(get_address_ip()), 11111)
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+flag = False
 receiver_thread = None
 MainWindow = None
 username = None
@@ -81,6 +81,9 @@ class ReceptionThread(QThread):
     msg_private = pyqtSignal(str)
     new_user = pyqtSignal(str)
     user_profil = pyqtSignal(str)
+    friends = pyqtSignal(str)
+    delete_friend = pyqtSignal(str)
+    new_friend = pyqtSignal(str)
     def __init__(self):
         super().__init__()
 
@@ -150,6 +153,21 @@ class ReceptionThread(QThread):
                 elif code[0] == "MSG_PRIVATE":
                     reply = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}"
                     self.msg_private.emit(reply)
+
+                elif code[0] == "FRIENDS":
+                    reply = f"{code[1]}|{code[2]}"
+                    print(reply)
+                    self.friends.emit(reply)
+
+                elif code[0] == "DELETE_FRIEND":
+                    reply = f"{code[2]}"
+                    print(reply)
+                    self.delete_friend.emit(reply)
+
+                elif code[0] == "NEW_FRIEND":
+                    reply = f"{code[1]}|{code[2]}"
+                    print(reply)
+                    self.new_friend.emit(reply)
 
                 else:
                     #print(f'Reception de : {reply}')
@@ -601,6 +619,7 @@ class Window(QObject):
         try:
             receiver_thread.success_connected.connect(self.history_code)
             receiver_thread.users_sended.connect(self.users_show)
+            receiver_thread.new_user.connect(self.users_show)
         except:
             pass
     
@@ -642,51 +661,72 @@ class Window(QObject):
 
     def users_show(self, users):
         users = users.split("|")
+        print(users)
         color = "green"
         if users[0] == "Général":
-            if users[2] == "ban":
-                color = "red"
-                self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            elif users[2] == "kick":
-                color = "orange"
-                self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            else:
+            try:
+                if users[2] == "ban":
+                    color = "red"
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                elif users[2] == "kick":
+                    color = "orange"
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                else:
+                    self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+            except IndexError:
                 self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+
         elif users[0] == "Blabla":
-            if users[2] == "ban":
-                color = "red"
-                self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            elif users[2] == "kick":
-                color = "orange"
-                self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            else:
+            try:
+                if users[2] == "ban":
+                    color = "red"
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                elif users[2] == "kick":
+                    color = "orange"
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                else:
+                    self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+            except IndexError:
                 self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+
         elif users[0] == "Comptabilité":
-            if users[2] == "ban":
-                color = "red"
-                self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            elif users[2] == "kick":
-                color = "orange"
-                self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            else:
+            try:
+                if users[2] == "ban":
+                    color = "red"
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                elif users[2] == "kick":
+                    color = "orange"
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                else:
+                    self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+        
+            except IndexError:
                 self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+
         elif users[0] == "Informatique":
-            if users[2] == "ban":
-                color = "red"
-                self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            elif users[2] == "kick":
-                color = "orange"
-                self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            else:
+            try:
+                if users[2] == "ban":
+                    color = "red"
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                elif users[2] == "kick":
+                    color = "orange"
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                else:
+                    self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+            except IndexError:
                 self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                
         elif users[0] == "Marketing":
-            if users[2] == "ban":
-                color = "red"
-                self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            elif users[2] == "kick":
-                color = "orange"
-                self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
-            else:
+            try:
+                if users[2] == "ban":
+                    color = "red"
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                elif users[2] == "kick":
+                    color = "orange"
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                else:
+                    self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+            except IndexError:
                 self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
         
 
@@ -755,24 +795,39 @@ class Window(QObject):
 
     def successBox(self, code200, concerne):
         success = QMessageBox()
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        success.setStyleSheet(stylesheet)
+
         success.setWindowTitle("Succès")
-        content = f"Vous à présent acces au salon {concerne} !"
+        content = f"Vous avez à présent acces au salon {concerne} !"
         success.setIcon(QMessageBox.Information)
         success.setText(content)
         success.exec()
     
     def successBox2(self, code):
         success = QMessageBox()
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        success.setStyleSheet(stylesheet)
+
         success.setWindowTitle("Succès")
         content = f"Vous possédez maintenant les droits administrateurs."
         success.setIcon(QMessageBox.Information)
         success.setText(content)
         success.exec()
-    
-
 
     def errorbox(self, code):
         error = QMessageBox()
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        error.setStyleSheet(stylesheet)
         error.setWindowTitle("Erreur")
         if code == "17":
             content = "(17) Vous n'avez pas la permission d'effectuer cette commande !"
@@ -856,7 +911,6 @@ class Login(QMainWindow):
 
         self.setObjectName("Login")
         self.setFixedSize(400, 300)
-
         self.setWindowTitle("Log in")
 
         self.label = QLabel(self)
@@ -1068,10 +1122,11 @@ class Sign_up(QMainWindow):
             cmdp = self.line_edit_5.text()
             
             reply = f"SIGNUP|{username}/{alias}/{mail}/{mdp}/{cmdp}"
-
-            self.sender_thread = SenderThread(reply)
-            self.sender_thread.start()
-            self.sender_thread.wait()
+            
+            if username != "" and alias != "" and mdp != "":
+                self.sender_thread = SenderThread(reply)
+                self.sender_thread.start()
+                self.sender_thread.wait()
 
         except Exception as e:
             print(e)
@@ -1091,9 +1146,9 @@ class Sign_up(QMainWindow):
         elif code == '6':
             content = "(6) Le mail ne respecte pas le format"
         elif code == '8':
-            content = "(8) L'utilisateur existe déjà, votre identifiant doit être unique."
+            content = "(8) L'utilisateur existe déjà, votre identifiant doit être unique. Votre nom d'utilisateur est peut-être interdit."
         elif code == '9':
-            content = "(9) Les caractères ne sont pas autorisés : %, #, &, '"
+            content = "(9) Les caractères ne sont pas autorisés : %, #, &, ', [espace]"
         else:
             return
 
@@ -1143,8 +1198,10 @@ class CourrierWidget(QWidget):
 
 
         elif type == "Ami":
-            self.comboBox2 = QComboBox(self)
-            layout.addWidget(self.comboBox2)
+            self.line_edit = QLineEdit(self)
+            self.line_edit.setMaxLength(45)
+            layout.addWidget(self.line_edit)
+            self.line_edit.setText(self.concerne)
 
         layout.addWidget(self.label)
 
@@ -1159,10 +1216,20 @@ class CourrierWidget(QWidget):
             except AttributeError:
                 pass
 
+            try:
+                self.line_edit.setEnabled(False)
+            except AttributeError:
+                pass
+
         else:
             self.button = QPushButton("Envoyer", self)
             self.button.clicked.connect(self.demande)
             layout.addWidget(self.button)
+
+            try:
+                self.line_edit.returnPressed.connect(self.demande)
+            except AttributeError:
+                pass
 
     def demande(self):
         global username
@@ -1174,7 +1241,11 @@ class CourrierWidget(QWidget):
                 self.label.setEnabled(False)
                 self.button.deleteLater()
             elif type == "Ami":
-                self.demande_ami(username)
+                if self.line_edit.text() != username and self.line_edit.text() != "" and self.line_edit.text() != " ":
+                    self.demande_ami(username)
+                    self.label.setEnabled(False)
+                    self.line_edit.setEnabled(False)
+                    self.button.deleteLater()
         except Exception as e:
             print(e)
         
@@ -1209,6 +1280,13 @@ class CourrierWidget(QWidget):
 
     def demande_admin(self, username):
         reply = f"DEMANDE|{username}|ADMIN"
+        self.sender_thread = SenderThread(reply)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    def demande_ami(self, username):
+        friend2 = self.line_edit.text()
+        reply = f"DEMANDE|{username}|AMI|{friend2}"
         self.sender_thread = SenderThread(reply)
         self.sender_thread.start()
         self.sender_thread.wait()
@@ -1350,18 +1428,35 @@ class CourrierWindow(QObject):
             self.errorBox(code)
         elif code == "30":
             self.errorBox(code)
+        elif code == "32":
+            self.errorBox(code)
+        elif code == "33":
+            self.errorBox(code)
+        elif code == "34":
+            self.errorBox(code)
 
     def errorBox(self, code):
         error = QMessageBox()
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        error.setStyleSheet(stylesheet)
         error.setWindowTitle("Erreur")
         if code == '26':
             content = "(26) Vous avez déjà acces à ce salon."
         elif code == '28':
-            content = "(28) Vous avez déjà demandé l'accès à ce salon."
+            content = "(28) Vous avez déjà fait cette demande."
         elif code == '29':
             content = "(29) L'utilisateur a déjà accès à ce salon."
         elif code == '30':
             content = "(30) Vous êtes déjà un super utilisateur."
+        elif code == "32":
+            content = "(32) Vous êtes déjà ami avec cet utilisateur."
+        elif code == "33":
+            content = "(33) L'utilisateur n'a pas été trouvé."
+        elif code == "34":
+            content = "(34) Cet utilisateur a déjà les droits administrateur."
         else:
             content = "Erreur inconnue"
 
@@ -1405,6 +1500,8 @@ class CourrierWindow(QObject):
 
     def add_demandeliste(self, demandeliste):
         global type
+        print("add demandeliste")
+        print(demandeliste)
         demandeliste = demandeliste.split("|")
         if demandeliste[1] == "Salon":
             text = f"{demandeliste[3]}\nDemande d'accès au salon {demandeliste[2]}."
@@ -1418,6 +1515,7 @@ class CourrierWindow(QObject):
 
         elif demandeliste[1] == "Ami":
             text = f"{demandeliste[3]}\nDemande d'ami."
+            concerne = demandeliste[2]
             type = "Ami"
 
         readonly = True
@@ -1435,6 +1533,8 @@ class CourrierWindow(QObject):
         text = demande
         demande = demande.split("|")
         date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+        print("notif")
+        print(demande)
 
         try:
             rep = demande[5]
@@ -1445,11 +1545,28 @@ class CourrierWindow(QObject):
             type2 = "Reponse"
             reponse = demande[4].split("/")
             print(reponse)
-            if demande[2] == "Admin":
+
+            if demande[1] == "Ami":
+                if reponse[0] == "0":
+                    demande = f"{demande[3]}\n{demande[2]} a refusé votre demande d'ami."
+                elif reponse[0] == '1':
+                    demande = f"{demande[3]}\n{demande[2]} a accepté votre demande d'ami."
+                text = text.split("|")
+                text = f"{text[0]}|{text[1]}|{text[2]}|{text[3]}|{reponse[0]}/Ami|{text[5]}"
+                print(text)
+
+            elif reponse[1] == "Ami":
+                if reponse[0] == "0":
+                    demande = f"{demande[3]}\n{demande[2]} a refusé votre demande d'ami."
+                elif reponse[0] == '1':
+                    demande = f"{demande[3]}\n{demande[2]} a accepté votre demande d'ami."
+
+            elif demande[2] == "Admin":
                 if reponse[0] == "0":
                     demande = f"{demande[3]}\nLes droits administrateur vous ont été refusé."
                 elif reponse[0] == '1':
                     demande = f"{demande[3]}\nLes droits administrateur vous ont été accordé."
+
             elif reponse[1] == "Salon":
                 if reponse[0] == "0":
                     demande = f"{demande[3]}\nL'accès au salon {demande[2]} vous est refusé."
@@ -1464,6 +1581,10 @@ class CourrierWindow(QObject):
         elif demande[1] == "Admin":
             demande = f"{date}\n{demande[0]} demande les droits administrateur."
             type2 = "Admin"
+
+        elif demande[1] == "Ami":
+            demande = f"{date}\n{demande[0]} vous demande en ami"
+            type2 = "Ami"
 
         item = QListWidgetItem(self.list_widget2)
         line_widget2 = CourrierReception(demande, text, self.list_widget2, item)
@@ -1498,7 +1619,7 @@ class ProfilWindow(QObject):
         fontunderline.setUnderline(True)
 
         self.username = QLabel(Profilwindow)
-        self.username.setGeometry(QRect(20, 10, 171, 41))
+        self.username.setGeometry(QRect(20, 10, 190, 41))
         self.username.setFont(fontbold)
         self.username.setObjectName("username")
 
@@ -1805,6 +1926,12 @@ class MessagerieWindow(QWidget):
 
     def setupUi(self):
         # Layout principal
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        self.setStyleSheet(stylesheet)
+
         layout = QHBoxLayout(self)
 
         # Liste des boutons (1 tiers gauche)
@@ -1813,8 +1940,9 @@ class MessagerieWindow(QWidget):
         
         button_layout.addWidget(self.button_list)
 
-        add_button = QPushButton("Amis", self)
-        button_layout.addWidget(add_button)
+        friends_button = QPushButton("Amis", self)
+        button_layout.addWidget(friends_button)
+        friends_button.clicked.connect(self.show_friends)
         # Ajout du layout des boutons au layout principal
         layout.addLayout(button_layout)
 
@@ -1845,6 +1973,7 @@ class MessagerieWindow(QWidget):
         self.setLayout(layout)
         self.setGeometry(100, 100, 800, 600)
         self.setWindowTitle('Messagerie')
+        self.setObjectName('Messagerie')
 
         receiver_thread.users_sended.connect(self.add_button_clicked)
         receiver_thread.msg_private.connect(self.add_msg_private)
@@ -1957,16 +2086,12 @@ class MessagerieWindow(QWidget):
                 selected_widget = self.button_list.itemWidget(selected_item)
                 chat = selected_widget.button2.text()
 
-                print(user)
-                print(chat)
-
                 if user == chat:
                     print("append !")
                     self.text_edit.append(private)
 
         except AttributeError:
             pass
-
     
     def add_button_clicked(self, users):
         global username
@@ -2031,7 +2156,124 @@ class MessagerieWindow(QWidget):
         except:
             pass
         Userprofilwindow.show()
+
+    def show_friends(self):
+        f.show()
+
+
+class Friends(QWidget):
+    global receiver_thread
+    def __init__(self):
+        super().__init__()
+
+        styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
+        style_file = QFile(styles_file_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text)
+        stylesheet = QTextStream(style_file).readAll()
+        self.setStyleSheet(stylesheet)
+
+        self.setObjectName("Friends")
+
+        # Créer la QListWidget
+        self.setFixedSize(400, 400)
+        self.setWindowTitle("Amis")
+        self.list_widget = QListWidget(self)
+
+        # Créer la mise en page principale
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(self.list_widget)
+
+        # Définir la mise en page principale
+        receiver_thread.friends.connect(self.add_friends)
+        receiver_thread.new_friend.connect(self.add_friends)
+        receiver_thread.delete_friend.connect(self.auto_del_friend)
+        self.setLayout(main_layout)
+
+    def add_friends(self, friends):
+        info_friends = friends.split("|")
+        user = info_friends[0]
+        alias = info_friends[1]
+        # Créer un nouvel élément QListWidgetItem
+        item = QListWidgetItem()
+
+        item_widget = QWidget()
+        item_layout = QGridLayout(item_widget)
         
+        self.label = QLabel(f"{alias} @{user}")
+        self.label.setObjectName(user)
+        self.button1 = QPushButton("👤")
+        self.button1.setObjectName(user)
+        self.button2 = QPushButton("Supprimer l'ami")
+        self.not_ok_icon = QIcon.fromTheme('dialog-cancel')  # Icône standard de "Ok"
+        self.button2.setIcon(self.not_ok_icon)
+
+    
+        item_layout.addWidget(self.button1, 0, 0)
+        item_layout.addWidget(self.label, 0, 1, 1, 3)
+        item_layout.addWidget(self.button2, 1, 0, 1, 4)
+
+        item_widget.setLayout(item_layout)
+
+        item.setSizeHint(item_widget.sizeHint())
+        self.list_widget.addItem(item)
+        self.list_widget.setItemWidget(item, item_widget)
+
+        self.button2.clicked.connect(lambda: self.box(user, item))
+        self.button1.clicked.connect(lambda: self.send_profil(item))
+
+        receiver_thread.user_profil.connect(self.show_profil)
+
+    def box(self, user, item):
+        error = QMessageBox(self)
+        error.setWindowTitle("Supprimer un ami")
+        content = f"Êtes vous sûr de vouloir retirer {user} de votre liste d'amis ?"
+        error.setText(content)
+        ok_button = error.addButton(QMessageBox.Ok)
+        ok_button.clicked.connect(lambda: self.delete_friend(user, item))
+        cancel_button = error.addButton(QMessageBox.Cancel)
+        error.setIcon(QMessageBox.Warning)
+        error.exec()
+
+    def delete_friend(self, user, item):
+        global username
+        reply = f"DELETE_FRIEND|{user}|{username}"
+        self.sender_thread = SenderThread(reply)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+        row = self.list_widget.row(item)
+        self.list_widget.takeItem(row)
+
+    def auto_del_friend(self, user):
+        for index in range(self.list_widget.count()):
+            item = self.list_widget.item(index)
+            label = self.list_widget.itemWidget(item).findChild(QLabel)
+            print(label.objectName())
+            if label.objectName() == user:
+                print("test")
+                # Supprimer l'élément de la liste
+                row = self.list_widget.row(item)
+                self.list_widget.takeItem(row)
+                break
+    
+    def send_profil(self, item):
+        global Userprofilwindow
+        button1 = self.list_widget.itemWidget(item).findChild(QPushButton)
+        button_name = button1.objectName()
+        print(button_name)
+
+        reply = f"USER_PROFIL|{button_name}"
+        self.sender_thread = SenderThread(reply)
+        self.sender_thread.start()
+        self.sender_thread.wait()
+
+    def show_profil(self, profil):
+        try:
+            Userprofilwindow.close()
+        except:
+            pass
+        Userprofilwindow.show()
+
 def show_signup_window():
     global signup_window
     signup_window = Sign_up()
@@ -2054,6 +2296,7 @@ if __name__ == "__main__":
         w = Login()
         w.show()
         m = MessagerieWindow()
+        f = Friends()
 
         photo_window = PhotoWindow()
 

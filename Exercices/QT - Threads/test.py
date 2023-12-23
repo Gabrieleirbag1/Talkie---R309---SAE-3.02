@@ -75,3 +75,8 @@ instance.method1()
 output = instance.method2("Hello")
 print(output)
 
+reply="12 12"
+print(reply)
+import re
+if not re.search(r"\s", reply):
+    print (reply)
