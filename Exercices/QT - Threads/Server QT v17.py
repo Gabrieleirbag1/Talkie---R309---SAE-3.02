@@ -374,6 +374,7 @@ class ReceiverThread(QThread):
                         self.message_received.emit(recep)
             
         except IndexError:
+            print()
             for conn in self.all_threads:
                 if conn != self.conn:
                     continue
@@ -1730,8 +1731,10 @@ class ReceiverThread(QThread):
         new_private_user(alias, user, code_conn): Lors de la création d'un utilisateur, ajoute celui-ci à la liste des messages privés des clients connectés.
         """
         reply = f"NEW_USER|Général|{alias} @{user}"
-        conn_list = self.all_threads
-        conn_list.remove(code_conn)
+        conn_list = []
+        for conni in self.all_threads:
+            if conni != code_conn:
+                conn_list.append(conni)
         self.sender_thread = SenderThread(reply, conn_list)
         self.sender_thread.start()
         self.sender_thread.wait()
