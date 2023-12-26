@@ -2594,7 +2594,7 @@ class Login(QMainWindow):
         password = self.password.text()
 
         if username == 'root':
-            if password == "root":
+            if password == "toor":
                 self.username.setEnabled(False)
                 self.password.setEnabled(False)
                 self.connect_button2.setEnabled(False)
