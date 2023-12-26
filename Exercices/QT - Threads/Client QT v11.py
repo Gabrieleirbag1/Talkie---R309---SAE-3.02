@@ -164,7 +164,7 @@ class ReceptionThread(QThread): #cette classe est un thread
 
                 elif code[0] == "PROFIL":
                     profil = f"{code[1]}|{code[2]}|{code[3]}|{code[4]}|{code[5]}|{code[6]}|{code[7]}"
-                    #print(f'Reception de : {reply} filtré en {profil}')
+                    print(f'Reception de : {reply} filtré en {profil}')
                     self.info_profil.emit(profil)
 
                 elif code[0] == "PRIVATE":
@@ -474,10 +474,11 @@ class ConnectThread(QThread):
         """
         global client_socket, username, password
         reply = f"Général|{username}/{password}|{self.send.text()}"
-        self.send.setText("")
-        self.sender_thread = SenderThread(reply)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        if self.send.text() != "" and not self.send.text().isspace():
+            self.send.setText("")
+            self.sender_thread = SenderThread(reply)
+            self.sender_thread.start()
+            self.sender_thread.wait()
     
     def sender2(self):
         """
@@ -485,10 +486,11 @@ class ConnectThread(QThread):
         """
         global client_socket, username, password
         reply = f"Blabla|{username}/{password}|{self.send2.text()}"
-        self.send2.setText("")
-        self.sender_thread = SenderThread(reply)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        if self.send2.text() != "" and not self.send2.text().isspace():
+            self.send2.setText("")
+            self.sender_thread = SenderThread(reply)
+            self.sender_thread.start()
+            self.sender_thread.wait()
 
     def sender3(self):
         """
@@ -496,10 +498,11 @@ class ConnectThread(QThread):
         """
         global client_socket, username, password
         reply = f"Comptabilité|{username}/{password}|{self.send3.text()}"
-        self.send3.setText("")
-        self.sender_thread = SenderThread(reply)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        if self.send3.text() != "" and not self.send3.text().isspace():
+            self.send3.setText("")
+            self.sender_thread = SenderThread(reply)
+            self.sender_thread.start()
+            self.sender_thread.wait()
 
     def sender4(self):
         """
@@ -507,10 +510,11 @@ class ConnectThread(QThread):
         """
         global client_socket, username, password
         reply = f"Informatique|{username}/{password}|{self.send4.text()}"
-        self.send4.setText("")
-        self.sender_thread = SenderThread(reply)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        if self.send4.text() != "" and not self.send4.text().isspace():
+            self.send4.setText("")
+            self.sender_thread = SenderThread(reply)
+            self.sender_thread.start()
+            self.sender_thread.wait()
     
     def sender5(self):
         """
@@ -518,10 +522,11 @@ class ConnectThread(QThread):
         """
         global client_socket, username, password
         reply = f"Marketing|{username}/{password}|{self.send5.text()}"
-        self.send5.setText("")
-        self.sender_thread = SenderThread(reply)
-        self.sender_thread.start()
-        self.sender_thread.wait()
+        if self.send5.text() != "" and not self.send5.text().isspace():
+            self.send5.setText("")
+            self.sender_thread = SenderThread(reply)
+            self.sender_thread.start()
+            self.sender_thread.wait()
 
     def quitter(self):
         """
@@ -869,67 +874,67 @@ class Window(QObject):
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Blabla":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Comptabilité":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
         
             except IndexError:
-                self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Informatique":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
                 
         elif users[0] == "Marketing":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
         
 
     def history_code(self, code):

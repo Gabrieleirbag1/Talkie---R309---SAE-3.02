@@ -8,7 +8,7 @@ try: #ouverture de la connexion mysql
         host='localhost', #host
         user='gab', #utilisateur
         password='', #mdp assigné (ici aucun)
-        database='Skype' #nom de la db
+        database='Talkie' #nom de la db
     )
 except Exception as e:
     print(e) #impression de l'éventuelle échec de connexion à la bdd mysql
@@ -257,8 +257,8 @@ class ReceiverThread(QThread):
                     print('DELETE FRIEND')
                     self.delete_friend(message, self.conn)
 
-                elif message[2] == "" or message[2] == " ": #pas de message vide
-                    pass
+                # elif message[2] == "" or message[2] == " ": #pas de message vide
+                #     pass
 
                 else :
                     if message[2] in cmd or sanction[0] in cmd:
@@ -270,6 +270,18 @@ class ReceiverThread(QThread):
                                     address = str(self.conn)
                                     conn.close()
                                     self.all_threads.remove(conn)
+                                    
+                                    index_conn = user_conn['Conn'].index(conn)
+                                    user = user_conn["Username"][index_conn]
+                                    address = user_conn['Address'][index_conn]
+                                    port = user_conn["Port"][index_conn]
+                                    superuser = user_conn["SuperUser"][index_conn]
+
+                                    user_conn["Conn"].remove(conn)
+                                    user_conn["Username"].remove(user)
+                                    user_conn["Address"].remove(address)
+                                    user_conn["Port"].remove(port)
+                                    user_conn["SuperUser"].remove(superuser)
                             recep = f'{recep}|{address}'
                             self.message_received.emit(recep)
                             break
@@ -365,6 +377,17 @@ class ReceiverThread(QThread):
                                 #Fermer uniquement la connexion qui a dit "bye"
                                 conn.close()
                                 self.all_threads.remove(conn)
+                                index_conn = user_conn['Conn'].index(conn)
+                                user = user_conn["Username"][index_conn]
+                                address = user_conn['Address'][index_conn]
+                                port = user_conn["Port"][index_conn]
+                                superuser = user_conn["SuperUser"][index_conn]
+
+                                user_conn["Conn"].remove(conn)
+                                user_conn["Username"].remove(user)
+                                user_conn["Address"].remove(address)
+                                user_conn["Port"].remove(port)
+                                user_conn["SuperUser"].remove(superuser)
 
                     else:
                         print(f'User : {message[2]}\n')
@@ -382,6 +405,18 @@ class ReceiverThread(QThread):
                     #Fermer uniquement la connexion qui s'est déconnectée.
                     conn.close()
                     self.all_threads.remove(conn)
+
+                    index_conn = user_conn['Conn'].index(conn)
+                    user = user_conn["Username"][index_conn]
+                    address = user_conn['Address'][index_conn]
+                    port = user_conn["Port"][index_conn]
+                    superuser = user_conn["SuperUser"][index_conn]
+
+                    user_conn["Conn"].remove(conn)
+                    user_conn["Username"].remove(user)
+                    user_conn["Address"].remove(address)
+                    user_conn["Port"].remove(port)
+                    user_conn["SuperUser"].remove(superuser)
 
         except ConnectionResetError:
             print("Une connexion réinitalisée a provoquée l'arrêt d'un client.")
@@ -588,9 +623,10 @@ class ReceiverThread(QThread):
 
         try:
             if info_profil[1] == "Description":
-                sanction_query = f"UPDATE user SET description = '{info_profil[2]}' WHERE username = '{user}'"
+                sanction_query = "UPDATE user SET description = %s WHERE username = %s"
+                data = (info_profil[2], user)
                 cursor = conn.cursor()
-                cursor.execute(sanction_query)
+                cursor.execute(sanction_query, data)
                 conn.commit()
                 self.close(cursor)
             
@@ -881,7 +917,7 @@ class ReceiverThread(QThread):
                                 for admin_conn in conn_list:
                                     self.send_new_salon(salon, admin_conn)
                                     lesalon = [salon]
-                                    self.new_salon2(user, lesalon)
+                                self.new_salon2(user, lesalon) #ajoute à la bdd de l'accès salon
                             except:
                                 pass
                         else:
@@ -1788,11 +1824,29 @@ class ReceiverThread(QThread):
 
                         try:
                             self.historique(code_conn)
+                        except:
+                            pass
+                        try:
                             self.users(code_conn)
+                        except:
+                            pass
+                        try:
                             self.notifications(code_conn)
+                        except:
+                            pass
+                        try:
                             self.demandes(code_conn)
+                        except:
+                            pass
+                        try:
                             self.profil(auth[0], code_conn)
+                        except:
+                            pass
+                        try:
                             self.private(auth[0], code_conn)
+                        except:
+                            pass
+                        try:
                             self.friends(auth[0], code_conn)
                         except:
                             pass
@@ -1838,6 +1892,7 @@ class ReceiverThread(QThread):
         """
         profil(user, code_conn): Envoie les informations du profil du client connecté.
         """
+        print("PROFIL")
         profil_query = f"SELECT * FROM user where username = '{user}'"
 
         cursor = conn.cursor()
@@ -1984,7 +2039,7 @@ class ReceiverThread(QThread):
 
         i = 0
         while i < len(result):
-            time.sleep(0.02)
+            time.sleep(0.1)
             if result[i] is None:
                 reply = f"CODE|{10+i}|PAS ACCES SALON"
                 self.send_code(reply, code_conn)
@@ -2363,7 +2418,7 @@ class AcceptThread(QThread):
         sender(): Appel el thread SenderThread pour envoyer un message Serveur aux clients.
         """
         reply = self.send.text()
-        date = datetime.datetime.now().strftime("%H%M")
+        date = datetime.datetime.now().strftime("%H:%M")
         if reply != "" and reply != " ":
             self.log.append(f"{date} - Serveur ~~ {reply}")
             self.send.setText("")
