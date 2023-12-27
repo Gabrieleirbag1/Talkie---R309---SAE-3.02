@@ -874,67 +874,67 @@ class Window(QObject):
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Blabla":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit2.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Comptabilité":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
         
             except IndexError:
-                self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit3.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
 
         elif users[0] == "Informatique":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit4.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
                 
         elif users[0] == "Marketing":
             try:
                 if users[2] == "ban":
                     color = "red"
-                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 elif users[2] == "kick":
                     color = "orange"
-                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}"><s>{users[1]}</s></font>\n──────────────────')
                 else:
-                    self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                    self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
             except IndexError:
-                self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n─────────────────')
+                self.users_text_edit5.append(f'<font color="{color}">{users[1]}</font>\n──────────────────')
         
 
     def history_code(self, code):
