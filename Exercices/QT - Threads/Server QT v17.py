@@ -263,11 +263,12 @@ class ReceiverThread(QThread):
                 else :
                     if message[2] in cmd or sanction[0] in cmd:
                         if message[2] == "/bye":
+                            recep = f'{recep}|{self.conn}'
+                            self.message_received.emit(recep)
                             for conn in self.all_threads:
                                 if conn != self.conn:
                                     continue
                                 else:  #Fermer uniquement la connexion qui a dit "bye"
-                                    address = str(self.conn)
                                     conn.close()
                                     self.all_threads.remove(conn)
                                     
@@ -282,8 +283,6 @@ class ReceiverThread(QThread):
                                     user_conn["Address"].remove(address)
                                     user_conn["Port"].remove(port)
                                     user_conn["SuperUser"].remove(superuser)
-                            recep = f'{recep}|{address}'
-                            self.message_received.emit(recep)
                             break
 
                         elif message[2] == "/help":
@@ -370,6 +369,13 @@ class ReceiverThread(QThread):
 
                     elif not message[2]:
                         print("leave")
+                        try:
+                            index_conn = user_conn['Conn'].index(self.conn)
+                            user = user_conn["Username"][index_conn]
+                            recep = f'Général|{user}|/bye|{self.conn}'
+                            self.message_received.emit(recep)
+                        except:
+                            pass
                         for conn in self.all_threads:
                             if conn != self.conn:
                                 continue
@@ -397,7 +403,13 @@ class ReceiverThread(QThread):
                         self.message_received.emit(recep)
             
         except IndexError:
-            print()
+            try:
+                index_conn = user_conn['Conn'].index(self.conn)
+                user = user_conn["Username"][index_conn]
+                recep = f'Général|{user}|/bye|{self.conn}'
+                self.message_received.emit(recep)
+            except:
+                pass
             for conn in self.all_threads:
                 if conn != self.conn:
                     continue
@@ -2397,13 +2409,14 @@ class AcceptThread(QThread):
             ip_address = match.group(1)
             port = match.group(2)
             conn_info = f"{ip_address} / {port}"
-
-            if message[2] in cmd:
-                self.log.append(f"({conn_info}) - {user[0]} s'est deconnecté.")
-                return
         else:
             conn_info = "Inconnu"
 
+        print(message[2])
+        if message[2] == "/bye":
+            self.log.append(f"({conn_info}) - {user[0]} s'est deconnecté.")
+            return
+    
         self.log.append(f'({message[0]} - {conn_info}) {user[0]} ~~ {message[2]}') 
     
 
