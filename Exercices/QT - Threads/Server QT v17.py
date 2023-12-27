@@ -8,7 +8,7 @@ try: #ouverture de la connexion mysql
         host='localhost', #host
         user='gab', #utilisateur
         password='', #mdp assigné (ici aucun)
-        database='Talkie' #nom de la db
+        database='Skype' #nom de la db
     )
 except Exception as e:
     print(e) #impression de l'éventuelle échec de connexion à la bdd mysql
@@ -22,7 +22,7 @@ user_conn = {'Conn' :[], 'Username' :[], 'Address' :[], 'Port' :[], 'SuperUser':
 
 help = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br>─────────────────────────────────────────"
 #liste des commandes pour le /help
-helpadmin = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br><br>───────────────── Admin ─────────────────<br>/ban (Banni un utilisateur):\<br>* [username] -p<br>* [ip/socket_id] -a<br><br>/kick (Exclu un utilisateur):<br>* [username] [int] [SECOND, MINUTE, HOUR, YEAR] -p<br>* [ip/socket_id] [int] [SECOND, MINUTE, HOUR, YEAR] -a<br><br>/get-ip (Permet d'obtenir l'adresse ip d'un utilisateur:<br>* [username]<br><br>/unban (Retire une sanction):<br>* [username]<br><br>/stop (Arrête le serveur)<br>─────────────────────────────────────────"
+helpadmin = "Liste des commandes<br>─────────────────────────────────────────<br>/help (Liste des commandes)<br>/bye (Déconnecte l'utilisateur)<br><br>───────────────── Admin ─────────────────<br>/ban (Banni un utilisateur):\<br>* [username] -p<br>* [ip/socket_id] -a<br><br>/kick (Exclu un utilisateur):<br>* [username] [int] [SECOND, MINUTE, HOUR, YEAR] -p<br>* [ip/socket_id] [int] [SECOND, MINUTE, HOUR, YEAR] -a<br><br>/get-ip (Permet d'obtenir l'adresse ip d'un utilisateur):<br>* [username]<br><br>/unban (Retire une sanction):<br>* [username]<br><br>/stop (Arrête le serveur)<br>─────────────────────────────────────────"
 #liste des commandes pour le /help lorsque admin
 
 #Création d'une classe qui hérite de QThread pour gérer la réception des messages
