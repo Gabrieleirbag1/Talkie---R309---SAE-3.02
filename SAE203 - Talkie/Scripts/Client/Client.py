@@ -952,7 +952,6 @@ class Window(QObject):
                 if int(code) > 9:
                     if code == '10':
                         self.tabWidget.setTabEnabled(0, False)
-                        self.tabWidget.Colo
                     
                     elif code == "11":
                         self.tabWidget.setTabEnabled(1, False)
@@ -1270,7 +1269,7 @@ class Login(QMainWindow):
         elif code20[0] == '20':
             content = f"(20) Vous avez été exclu jusqu'au {code20[1]}"
         else:
-            content = "Erreur inconnue"
+            content = "(18) Erreur inconnue"
 
         error.setText(content)
         error.setIcon(QMessageBox.Warning)
@@ -1433,6 +1432,8 @@ class Sign_up(QMainWindow):
             content = "(5) Les mots de passes ne correspondent pas"
         elif code == '6':
             content = "(6) Le mail ne respecte pas le format"
+        elif code == "7":
+            content = "(7) Nom d'utilisateur interdit"
         elif code == '8':
             content = "(8) L'utilisateur existe déjà, votre identifiant doit être unique. Votre nom d'utilisateur est peut-être interdit."
         elif code == '9':
@@ -1860,7 +1861,7 @@ class CourrierWindow(QObject):
         elif code == "34":
             content = "(34) Cet utilisateur a déjà les droits administrateur."
         else:
-            content = "Erreur inconnue"
+            content = "(18) Erreur inconnue"
 
         error.setText(content)
         error.setIcon(QMessageBox.Warning)

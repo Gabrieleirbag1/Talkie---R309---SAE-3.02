@@ -1759,12 +1759,12 @@ class ReceiverThread(QThread):
                             reply = f"{reply}|9|CARACTERES NON AUTORISÉS"
                             self.send_code(reply, code_conn)
                     else:
-                        reply = f"{reply}|8|USERNAME NON UNIQUE OU INTERDIT"
+                        reply = f"{reply}|7|USERNAME INTERDIT"
                         self.send_code(reply, code_conn)
                         
                 except mysql.connector.Error as err:
                     if err.errno == 1062:  #Numéro d'erreur MySQL pour la violation de contrainte d'unicité
-                        reply = f"{reply}|8|USERNAME NON UNIQUE OU INTERDIT"
+                        reply = f"{reply}|8|USERNAME NON UNIQUE"
                         self.send_code(reply, code_conn)
                     elif err.errno == 3819:
                         reply = f"{reply}|9|CARACTERES NON AUTORISÉS"
