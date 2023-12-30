@@ -5,6 +5,7 @@ import sys, socket, time, datetime, os, re
 
 
 def get_address_ip():
+    """get_address_ip(): Cette fonction permet de récupérer l'adresse IP externe du client."""
     # utilisation d'un DNS public pour obtenir l'adresse IP externe
     try:
         address_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -124,6 +125,7 @@ class ReceptionThread(QThread): #cette classe est un thread
         super().__init__()
 
     def run(self):
+        """run(): La méthode run permet de lancer le QThread de reception de message."""
         print("ReceptionThread up")
         global flag, client_socket
         while not flag:
@@ -223,7 +225,13 @@ class ReceptionThread(QThread): #cette classe est un thread
     def ajouter_private(self, all_private, user, code):
         """
         ajouter_private(all_private, user, code): Ajoute au dictionnaire des message privés le message, privé, le contenu des messages, le date. 
-        Ecas de nouvel utilisateur, nouvel élément dans les listes dictionnaires, sinon rajoute juste au contenu actuel à l'index de l'utilisateur déjà enregistré."""
+        En cas de nouvel utilisateur, nouvel élément dans les listes dictionnaires, sinon rajoute juste au contenu actuel à l'index de l'utilisateur déjà enregistré.
+        
+        Args:
+            all_private: La valeur initiale provient de la classe MainWindow.
+            user: La valeur initiale provient de la classe MainWindow.
+            code: La valeur initiale provient de la classe MainWindow.
+        """
         date = code[4].split(" ")
         private = f"{date[1]} - {code[1]} ~~ {code[3]}"
         for index, existing_user in enumerate(all_private["User"]):
@@ -376,6 +384,9 @@ class ConnectThread(QThread):
     def update_reply(self, message):
         """
         update_reply(message): Ajoute en fonction de l'entête le message dans le bon chat via le signal message_received, ou serveur dans tous les chats.
+
+        Args:
+            message (str): La valeur initiale provient de la classe ReceptionThread.
         """
         message = message.split("|")
         entete = message[1].split("-")
@@ -416,6 +427,9 @@ class ConnectThread(QThread):
     def check_date(self, date):
         """
         check_date(date): vérifie la date du text edit du premier onglet.
+
+        Args:
+            date (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global mois
         if date != mois:
@@ -427,6 +441,9 @@ class ConnectThread(QThread):
     def check_date2(self, date):
         """
         check_date2(date): vérifie la date du text edit du deuxième onglet.
+
+        Args:
+            date (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global mois2
         if date != mois2:
@@ -438,6 +455,9 @@ class ConnectThread(QThread):
     def check_date3(self, date):
         """
         check_date3(date): vérifie la date du text edit du troisième onglet.
+
+        Args:
+            date (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global mois3
         if date != mois3:
@@ -449,6 +469,9 @@ class ConnectThread(QThread):
     def check_date4(self, date):
         """
         check_date4(date): vérifie la date du text edit du quatrième onglet.
+
+        Args:
+            date (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global mois4
         if date != mois4:
@@ -460,6 +483,9 @@ class ConnectThread(QThread):
     def check_date5(self, date):
         """
         check_date5(date): vérifie la date du text edit du cinquième onglet.
+
+        Args:
+            date (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global mois5
         if date != mois5:
@@ -573,6 +599,9 @@ class Window(QObject):
     def setup_window(self, MainWindow):
         """
         setup_window(MainWindow): Met en place l'interface de la fenêtre principale avec les onglets
+
+        Args:
+            MainWindow: La valeur initiale provient de la classe MainWindow.
         """
         global receiver_thread
 
@@ -866,6 +895,9 @@ class Window(QObject):
     def users_show(self, users):
         """
         users_show(users): Affiche les utilisateurs dans le text edit de chaque salon si ils y ont accès, avec la nuance de couleur en fonction de s'ils ont une sanction, ou pas, ou qu'ils ont le grade admin.
+        
+        Args:
+            users (str): La valeur initiale provient de la classe ReceptionThread.
         """
         users = users.split("|")
         print(users)
@@ -940,6 +972,9 @@ class Window(QObject):
     def history_code(self, code):
         """
         history_code(code): Récupère les codes d'erreurs de la fenêtre principale, renvoyant l'accès au salon premièrement, et aux fenêtre de type dialog d'erreur ou de succès.
+        
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         try:
             try:
@@ -1005,6 +1040,10 @@ class Window(QObject):
     def successBox(self, code200, concerne):
         """
         succesBox(code200, concerne): Fenêtre de type dialog affichant un succès d'accès salon suite à un code de réussite.
+
+        Args:
+            code200 (str): La valeur initiale provient de la classe ReceptionThread.
+            concerne (str): La valeur initiale provient de la classe ReceptionThread.
         """
         success = QMessageBox()
         styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
@@ -1022,6 +1061,9 @@ class Window(QObject):
     def successBox2(self, code):
         """
         succesBox2(code): Fenêtre de type dialog affichant un succès d'obtention des droits adminsuite à un code de réussite.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         success = QMessageBox()
         styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
@@ -1039,6 +1081,9 @@ class Window(QObject):
     def errorbox(self, code):
         """
         errorBox(code): Fenêtre de type dialog affichant une erreur suite à un code d'erreur envoyé par le serveur. 
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         error = QMessageBox()
         styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
@@ -1078,6 +1123,9 @@ class Window(QObject):
     def translate_window(self, MainWindow):
         """
         translate_window(MainWindow): Permet de donner à noms aux attributs des différents tab via la fonction translate de QT.
+
+        Args:
+            MainWindow: La valeur initiale provient de la classe MainWindow et en est l'instance.
         """
         _translate = QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Talkie"))
@@ -1211,6 +1259,9 @@ class Login(QMainWindow):
     def login(self, code):
         """
         login(code): Gère les codes d'erreur de la fenêtre de log in.
+        
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global MainWindow, signup_window
         try:
@@ -1252,7 +1303,11 @@ class Login(QMainWindow):
 
     def errorBox(self, code, code20):
         """
-        errorBox(code): Fenêtre de type dialog affichant une erreur suite à un code d'erreur envoyé par le serveur. 
+        errorBox(code): Fenêtre de type dialog affichant une erreur suite à un code d'erreur envoyé par le serveur.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
+            code20 (str): La valeur initiale provient de la classe ReceptionThread.
         """
         error = QMessageBox(self)
         error.setWindowTitle("Erreur")
@@ -1284,7 +1339,10 @@ class Sign_up(QMainWindow):
         
     """
     def __init__(self, parent=None):
-        """Initialise une instance de la classe Sign_up()"""
+        """Initialise une instance de la classe Sign_up()
+        
+        Args:
+            parent (QWidget): La valeur initiale est None."""
         super(Sign_up, self).__init__(parent)
 
         self.setup_window()
@@ -1415,6 +1473,9 @@ class Sign_up(QMainWindow):
     def sign_code(self, code):
         """
         sign_code(code): Renvoie à la fenêtre de succès si l'inscription est réussie.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         if code == '4':
             self.successBox(code)
@@ -1424,6 +1485,9 @@ class Sign_up(QMainWindow):
     def errorBox(self, code):
         """
         errorBox(code): Renvoie à la fenêtre d'erreur en cas d'échec de l'inscription.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         error = QMessageBox(self)
         error.setWindowTitle("Erreur")
@@ -1448,6 +1512,9 @@ class Sign_up(QMainWindow):
     def successBox(self, code):
         """
         succesbox(code): Fenêtre de succès d'inscription.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         if code == '4':
             success = QMessageBox(self)
@@ -1505,6 +1572,9 @@ class CourrierWidget(QWidget):
     def setup_window(self, text):
         """
         setup_window(text): Crée l'interface graphique de l'élément de la QListWidget, avec le texte de la demande, et en vérifiant le type.
+
+        Args:
+            text (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global type
 
@@ -1589,6 +1659,9 @@ class CourrierWidget(QWidget):
     def demande_salon(self, username):
         """
         demande_salon(username): Envoie la requête de demande de salon au serveur via le SenderThread().
+
+        Args:
+            username (str): La valeur initiale provient de la classe ReceptionThread.
         """
         if self.comboBox.currentText() != "":
             if self.comboBox.currentText() == "Blabla":
@@ -1611,6 +1684,9 @@ class CourrierWidget(QWidget):
     def demande_admin(self, username):
         """
         demande_admin(username): Envoie la requête de demande des droits admin au serveur via le SenderThread().
+
+        Args:
+            username (str): La valeur initiale provient de la classe ReceptionThread.
         """
         reply = f"DEMANDE|{username}|ADMIN"
         self.sender_thread = SenderThread(reply)
@@ -1620,6 +1696,9 @@ class CourrierWidget(QWidget):
     def demande_ami(self, username):
         """
         demande_amiusername): Envoie la requête de demande d'ami au serveur via le SenderThread().
+
+        Args:
+            username (str): La valeur initiale provient de la classe ReceptionThread.
         """
         friend2 = self.line_edit.text()
         reply = f"DEMANDE|{username}|AMI|{friend2}"
@@ -1666,6 +1745,9 @@ class CourrierReception(QWidget):
     def setup_window(self, demande):
         """
         setup_window(demande): Crée l'interface graphique du QWidget servant d'élément de la liste crée dans CourrierWindow() côté réception.
+
+        Args:
+            demande (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global type2, username
         layout = QVBoxLayout(self)
@@ -1767,6 +1849,9 @@ class CourrierWindow(QObject):
     def setup_window(self, Courrierwindow):
         """
         setup_window(Courrierwindow): Affiche l'interface graphique de la fenêtre courrier avec notamment les onglets et les QlistWidget dedans.
+
+        Args:
+            Courrierwindow (QWidget): La valeur initiale provient de la classe CourrierWindow et en est l'instance.
         """
         Courrierwindow.setObjectName("Courrierwindow")
         Courrierwindow.setFixedSize(400, 300)
@@ -1819,6 +1904,9 @@ class CourrierWindow(QObject):
     def courrier(self, code):
         """
         courrier(code): Renvoie les codes d'erreurs concernant les demandes vers la fonction qui affiche la fenêtre d'erreur.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         if code == "26":
             self.errorBox(code)
@@ -1838,6 +1926,9 @@ class CourrierWindow(QObject):
     def errorBox(self, code):
         """
         errorBox(code): Crée la fenêtre de type dialog contenant le message d'erreur.
+
+        Args:
+            code (str): La valeur initiale provient de la classe ReceptionThread.
         """
         error = QMessageBox()
         styles_file_path = os.path.join(os.path.dirname(__file__), "styles/styles_login.qss")
@@ -1871,6 +1962,9 @@ class CourrierWindow(QObject):
     def translate_window(self, Courrierwindow):
         """
         translate_window(Courrierwindow): Permet de donner à noms aux attributs des différents tab via la fonction translate de QT.
+
+        Args:
+            Courrierwindow (QWidget): La valeur initiale provient de la classe CourrierWindow et en est l'instance.
         """
         _translate = QCoreApplication.translate
         Courrierwindow.setWindowTitle(_translate("Courrierwindow", "Boite aux lettres"))
@@ -1910,6 +2004,9 @@ class CourrierWindow(QObject):
     def add_demandeliste(self, demandeliste):
         """
         add_demandeliste(demandeliste): Via le signal du thread de réception ajoute automatiquement toutes les demandes côté envoi faites précedemment par le client concerné lors de sa connexion.
+        
+        Args:
+            demandeliste (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global type
         print("add demandeliste")
@@ -1943,6 +2040,9 @@ class CourrierWindow(QObject):
     def add_notifications(self, demande):
         """
         add_notifications(demande ): Via le signal du thread de réception ajoute automatiquement toutes les demandes côté réception faites précedemment par le client concerné lors de sa connexion.
+        
+        Args:
+            demande (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global type2
         text = demande
@@ -2026,7 +2126,11 @@ class ProfilWindow(QObject):
     """
     global receiver_thread, photo_window
     def setup_window(self, Profilwindow):
-        """setup_window(Profilwindow): Affiche l'interface graphique du profil de l'utilisateur."""
+        """setup_window(Profilwindow): Affiche l'interface graphique du profil de l'utilisateur.
+        
+        Args:
+            Profilwindow (QWidget): La valeur initiale provient de la classe ProfilWindow et en est l'instance.
+        """
         Profilwindow.setObjectName("Profilwindow")
         Profilwindow.setWindowTitle("Profil")
         Profilwindow.setFixedSize(393, 326)
@@ -2108,6 +2212,9 @@ class ProfilWindow(QObject):
     def profil(self, info_profil):
         """
         profil(info_profil): Via le signal depuis le thread de réception, obtient toutes les informations pour remplir les champs du profil. Cherche également dans le dictionnaire des photos pour trouver l'image correspondante.
+        
+        Args:
+            info_profil (str): La valeur initiale provient de la classe ReceptionThread.
         """
         info_profil = info_profil.split("|")
 
@@ -2151,6 +2258,9 @@ class ProfilWindow(QObject):
     def photo_update(self, photo):
         """
         photo_update(photo): Modifie la photo de profil (qui est un emoji).
+
+        Args:
+            photo (str): La valeur initiale provient de la classe PhotoWindow.
         """
         self.photo.setText(photo)
 
@@ -2174,6 +2284,9 @@ class UserProfilWindow(QObject):
     def setup_window(self, Userprofilwindow):
         """
         setup_window(Userprofilwindow): Affiche l'interface graphique du profil de l'utilisateur.
+
+        Args:
+            Userprofilwindow (QWidget): La valeur initiale provient de la classe UserProfilWindow et en est l'instance.
         """
         Userprofilwindow.setObjectName("Profilwindow")
         Userprofilwindow.setWindowTitle("Profil")
@@ -2248,6 +2361,9 @@ class UserProfilWindow(QObject):
     def set_user_profil(self, profil):
         """
         set_user_profil(profil): Via le signal depuis le thread de réception, obtient toutes les informations pour remplir les champs du profil. Cherche également dans le dictionnaire des photos pour trouver l'image correspondante.
+        
+        Args:
+            profil (str): La valeur initiale provient de la classe ReceptionThread.
         """
         info_profil = profil.split("|")
 
@@ -2281,6 +2397,11 @@ class PhotoWindow(QMainWindow):
     """
     photo_change = pyqtSignal(str)
     def __init__(self, parent = None):
+        """Initialise le thread Photowindow
+        
+        Args:
+            parent: Valeur initalement obtenue depuis la classe ProfilWindow qui reçoit un signal contenant le nom d'utilisateur qui correspond à cette valeur.
+        """
         super(PhotoWindow, self).__init__(parent)
 
         self.setup_window()
@@ -2361,6 +2482,9 @@ class PhotoWindow(QMainWindow):
     def photo_update(self, photo):
         """
         photo_update(photo): Modifie la photo de profil en utilisant le dictionnaire pour trouver le nom correspondant à l'image et l'envoyer à la BDD.
+
+        Args:
+            photo (str): La valeur initiale provient de la classe PhotoWindow.
         """
         self.photo_change.emit(photo)
 
@@ -2548,6 +2672,9 @@ class MessagerieWindow(QWidget):
     def add_msg_private(self, msg):
         """
         add_msg_private(msg): Ajoute aux dictionnaires les messages privés nouveaux obtenu durant la connexion, et si l'utilisateur à sélectionné l'utilisateur au niveau de l'élmément de la QListWidget, les messages s'affichent en temps réel dans le text_edit.
+        
+        Args:
+            msg (str): La valeur initiale provient de la classe ReceptionThread.
         """
         print("add_msg_private")
         print(msg)
@@ -2615,6 +2742,9 @@ class MessagerieWindow(QWidget):
     def add_button_clicked(self, users):
         """
         add_button_clicked(users): Permet d'ajouter au QListWidget le nouvel élément contenant l'utilisateur pour poouvoir converser avec lui, via le signal du thread de réception.
+        
+        Args:
+            users (str): La valeur initiale provient de la classe ReceptionThread.
         """
         global username
         group = users.split("|")
@@ -2647,6 +2777,9 @@ class MessagerieWindow(QWidget):
         """
         show_text_edit(button_widget): Cherche le nom d'utilisateur qui est assigné au bouton qui est cliqué et affiche dans le text edit la partie contenu au niveau de l'index de l'utilisateur associé, dans le dictionnaire.
         Pour rappel tous les messages sont stockés dans le dictionnaire au même index que l'utilisateur.
+
+        Args:
+            button_widget (QWidget): La valeur initiale provient de la classe UsersWidget.
         """
         button_name = button_widget.button_name
         try:
@@ -2669,6 +2802,9 @@ class MessagerieWindow(QWidget):
     def send_profil(self, button_widget):
         """
         send_profil(button_widget): Envoie une requête serveur pour obtenir le profil utilisateur demandé, en le récupérant via l'objet de la liste.
+
+        Args:
+            button_widget (QWidget): La valeur initiale provient de la classe UsersWidget.
         """
         global Userprofilwindow
         button_name = button_widget.button_name #le nom de l'utilisateur est associé au bouton
@@ -2682,6 +2818,9 @@ class MessagerieWindow(QWidget):
     def show_profil(self, profil):
         """
         show_profil(profil): Permet lors de la réception du signal avec les données du profil de l'utilisateur concerné d'afficher la fenêtre avec les données.
+
+        Args:
+            profil (str): La valeur initiale provient de la classe ReceptionThread.
         """
         try:
             Userprofilwindow.close()
@@ -2744,6 +2883,9 @@ class Friends(QWidget):
     def add_friends(self, friends):
         """
         add_friends(friends): Ajoute les amis au QListWidget avec l'interface graphique du QWidget.
+
+        Args:
+            friends (str): La valeur initiale provient de la classe ReceptionThread.
         """
         info_friends = friends.split("|")
         user = info_friends[0]
@@ -2781,6 +2923,10 @@ class Friends(QWidget):
     def box(self, user, item):
         """
         box(user, item): Fenêtre de dialog lors de la supression d'un ami qui demande confirmation.
+
+        Args:
+            user (str): La valeur initiale provient de la classe ReceptionThread.
+            item (QWidget): La valeur initiale provient de la classe Friends().
         """
         error = QMessageBox(self)
         error.setWindowTitle("Supprimer un ami")
@@ -2795,6 +2941,10 @@ class Friends(QWidget):
     def delete_friend(self, user, item):
         """
         delete_friend(user, item): Envoie via le thread d'envoi un message au serveur de l'ami à retirer, et supprime l'élément graphiquement.
+
+        Args:
+            user (str): La valeur initiale provient de la classe ReceptionThread.
+            item (QWidget): La valeur initiale provient de la classe Friends().
         """
         global username
         reply = f"DELETE_FRIEND|{user}|{username}"
@@ -2808,6 +2958,9 @@ class Friends(QWidget):
     def auto_del_friend(self, user):
         """
         auto_del_friend(user): Reçoit du serveur le nom de l'ami à supprimer pour enelever automatiquement du côté des deux users plus amis l'élément QWidget en cherchant dans la liste.
+        
+        Args:
+            user (str): La valeur initiale provient de la classe ReceptionThread.
         """
         for index in range(self.list_widget.count()):
             item = self.list_widget.item(index)
@@ -2823,6 +2976,9 @@ class Friends(QWidget):
     def send_profil(self, item):
         """
         send_profil(item): Envoie la requête de l'utilisateur pour lequel on veut afficher le profil en récupérant via le nom du bouton.
+
+        Args:
+            item (QWidget): La valeur initiale provient de la classe Friends().
         """
         global Userprofilwindow
         button1 = self.list_widget.itemWidget(item).findChild(QPushButton)
@@ -2837,6 +2993,9 @@ class Friends(QWidget):
     def show_profil(self, profil):
         """
         show_profil(profil): Permet lors de la réception du signal avec les données du profil de l'utilisateur concerné d'afficher la fenêtre avec les données.
+        
+        Args:
+            profil (str): La valeur initiale provient de la classe ReceptionThread.
         """
         try:
             Userprofilwindow.close()
@@ -2854,6 +3013,7 @@ def show_signup_window():
 
 
 if __name__ == "__main__":
+    """__main()__: Initialise l'application et les fenêtres."""
     try:
         app = QApplication(sys.argv)
         MainWindow = QMainWindow()
