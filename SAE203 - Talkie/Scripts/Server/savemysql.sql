@@ -30,7 +30,7 @@ CREATE TABLE `acces_salon` (
   PRIMARY KEY (`id_salon`),
   KEY `FK_UsernameSalon` (`user`),
   CONSTRAINT `FK_UsernameSalon` FOREIGN KEY (`user`) REFERENCES `user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,7 +50,7 @@ CREATE TABLE `demande` (
   `validate` tinyint(1) DEFAULT NULL,
   `reponse` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id_demande`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -66,7 +66,7 @@ CREATE TABLE `friends` (
   `friend2` varchar(45) DEFAULT NULL,
   `date` datetime DEFAULT NULL,
   PRIMARY KEY (`id_friends`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -85,7 +85,7 @@ CREATE TABLE `message` (
   PRIMARY KEY (`id_message`),
   KEY `FK_UsernameMessage` (`user`),
   CONSTRAINT `FK_UsernameMessage` FOREIGN KEY (`user`) REFERENCES `user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -106,7 +106,7 @@ CREATE TABLE `private` (
   KEY `user2` (`user2`),
   CONSTRAINT `private_ibfk_1` FOREIGN KEY (`user1`) REFERENCES `user` (`id_user`),
   CONSTRAINT `private_ibfk_2` FOREIGN KEY (`user2`) REFERENCES `user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -124,7 +124,7 @@ CREATE TABLE `sanction` (
   `user` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`id_sanction`),
   UNIQUE KEY `uc_user` (`user`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -147,8 +147,8 @@ CREATE TABLE `user` (
   `photo` varchar(50) DEFAULT 'bear',
   PRIMARY KEY (`id_user`),
   UNIQUE KEY `unique_username` (`username`),
-  CONSTRAINT `CK_username_chars` CHECK ((not(regexp_like(`username`,_utf8mb4'[#&%\']'))))
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `CK_username_chars` CHECK (username NOT REGEXP '[#&%\']')
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `user` (`username`, `password`, `mail`, `date_creation`, `alias`, `is_admin`)
 VALUES ('TheAdmin', 'toto', 'admin@example.com', NOW(), 'Admin', 1);
